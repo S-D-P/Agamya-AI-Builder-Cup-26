@@ -643,3 +643,5 @@ fieldset > legend { padding: 0; margin-bottom: 8px; }
 .impact-n { font-family: var(--display); font-size: 30px; line-height: 1.1; font-weight: 600; }
 .impact-n .muted { font-family: var(--font); font-size: 13px; font-weight: 500; }
 .impact-l { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+/* With the Work sidebar on screen (wider than 860px), Back sits at the bottom-left of the page area, not over the sidebar. */
+@media (min-width: 861px) { body:has(.shell .sidebar) .back-fab { left: 252px; } }
