@@ -1,0 +1,77 @@
+{
+  "about": "Marathi evaluation set for Agamya's language layer. Domain: Lakshmi's ghee (the featured Living Knowledge sample). Each case names the behaviour under test and a deterministic check; scripts/eval-marathi.mjs runs it against live Gemini once and writes data/eval/marathi-results.json.",
+  "provenance": "Written for this project by the developer with AI assistance. NOT yet reviewed by a native Marathi speaker: wording, register and the expected meanings must be checked before any result is treated as evidence of Marathi quality.",
+  "glossary": {
+    "तूप": "ghee",
+    "लोणी": "butter",
+    "बेरी": "the browned milk solids left in the pan when making ghee (NOT the fruit 'berry')",
+    "फेस": "foam",
+    "कढीपत्ता": "curry leaf",
+    "सोनेरी": "golden",
+    "तांबूस": "reddish-brown",
+    "करपणे": "to scorch / burn"
+  },
+  "capture": [
+    {
+      "id": "mr-ordinary",
+      "category": "ordinary Marathi",
+      "answer": "घड्याळाकडे बघू नकोस. तळाशी बेरी सोनेरी झाली आणि फेस खाली बसला की तूप तयार झालं. वीस मिनिटं थांबलीस तर बेरी करपते आणि तुपाला करपट वास येतो.",
+      "checks": ["question in Devanagari", "extracted values in Devanagari", "every quote is verbatim from the answer", "English rendering does not contain 'berry'"]
+    },
+    {
+      "id": "mr-codeswitch",
+      "category": "code-switching (Marathi + English)",
+      "answer": "Store-bought लोण्यात पाणी जास्त असतं, so it takes longer. मी नेहमी colour बघते, time नाही.",
+      "checks": ["quotes keep the English words as spoken", "every quote is verbatim from the answer", "values not translated to English"]
+    },
+    {
+      "id": "mr-trap",
+      "category": "domain term / literal-translation trap",
+      "answer": "बेरी जरा तांबूस झाली की लगेच गॅस बंद कर, नाहीतर तूप कडू होतं.",
+      "checks": ["'बेरी' kept in the Marathi value", "English rendering does not contain 'berry'", "every quote is verbatim from the answer"]
+    }
+  ],
+  "knowledge": {
+    "title": "तूप कधी तयार होतं",
+    "text": "नियम: तूप घड्याळावरून नाही, तर तळाच्या बेरीच्या रंगावरून ओळखायचं.\nनिरीक्षण: तळाशी बेरी सोनेरी झाली आणि फेस खाली बसला की तूप तयार झालं.\nअट: दुकानातल्या लोण्यात पाणी जास्त असतं, त्यामुळे जास्त वेळ लागतो; बेरी पांढरी असेल तर अजून कढवत राहायचं.\nतपासणी: कढीपत्ता टाकल्यावर लगेच तडतडला तर पाणी संपलं आहे."
+  },
+  "ask": [
+    {
+      "id": "ask-grounded",
+      "category": "learner question, covered by the knowledge",
+      "question": "दुकानातलं लोणी असेल तर बारा मिनिटांनी गॅस बंद करायचा का?",
+      "expect": "grounded",
+      "checks": ["answer in Devanagari", "grounded with at least one verified citation", "answer says to go by the colour, not the time"]
+    },
+    {
+      "id": "ask-codeswitch",
+      "category": "learner question with code-switching",
+      "question": "Curry leaf टाकल्यावर काय बघायचं?",
+      "expect": "grounded",
+      "checks": ["answer in Devanagari", "grounded with at least one verified citation"]
+    },
+    {
+      "id": "ask-ambiguous",
+      "category": "ambiguity",
+      "question": "ते कधी बंद करायचं?",
+      "expect": "grounded_or_clarify",
+      "checks": ["either a grounded answer or a clarifying question; never an invented rule"]
+    },
+    {
+      "id": "ask-unsupported",
+      "category": "not covered (insufficient evidence)",
+      "question": "तूप किती दिवस टिकतं?",
+      "expect": "insufficient",
+      "checks": ["insufficient, not a confident answer", "reply in Devanagari"]
+    }
+  ],
+  "speech": [
+    {
+      "id": "tts-roundtrip",
+      "category": "speech round trip (Gemini TTS → transcription)",
+      "text": "बेरी सोनेरी झाली आणि फेस खाली बसला की तूप तयार झालं.",
+      "checks": ["transcript in Devanagari", "character overlap with the spoken text"],
+      "caveat": "Synthetic speech from the same provider is far easier than a real speaker; this tests the pipeline, not real-world accuracy."
+    }
+  ]
+}

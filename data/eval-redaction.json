@@ -1,0 +1,113 @@
+{
+  "dataset": "ai4privacy/pii-masking-200k (english_pii_43k.jsonl)",
+  "rows": 43501,
+  "ranAt": "2026-10-16T04:31:18.087Z",
+  "recall": {
+    "EMAIL": {
+      "labelled": 4092,
+      "masked": 4092,
+      "recallPct": 100,
+      "exampleMisses": []
+    },
+    "PHONENUMBER": {
+      "labelled": 2425,
+      "masked": 2293,
+      "recallPct": 94.6,
+      "exampleMisses": [
+        "05-67.88-41 32",
+        "07-03-39-19.17",
+        "08.43-82 94-44",
+        "07-27-75 07.37",
+        "09 37.71.60-04",
+        "09.37 75.16-84"
+      ]
+    },
+    "CREDITCARDNUMBER": {
+      "labelled": 2574,
+      "masked": 268,
+      "recallPct": 10.4,
+      "exampleMisses": [
+        "2948447876023997",
+        "6381973478101820",
+        "6259724424541296",
+        "1417506813461516",
+        "7544035128672631",
+        "9704152215984072"
+      ]
+    },
+    "IBAN": {
+      "labelled": 1973,
+      "masked": 1971,
+      "recallPct": 99.9,
+      "exampleMisses": [
+        "FI8813388502635093",
+        "TN2470001280010401910961"
+      ]
+    },
+    "SSN": {
+      "labelled": 2045,
+      "masked": 2042,
+      "recallPct": 99.9,
+      "exampleMisses": [
+        "711 50 5518",
+        "756.2177.3265",
+        "335 15 9744"
+      ]
+    }
+  },
+  "cardRecallLuhnValidOnly": {
+    "labelled": 266,
+    "masked": 266,
+    "recallPct": 100
+  },
+  "overMasking": {
+    "AMOUNT": {
+      "labelled": 3103,
+      "changed": 0,
+      "changedPct": 0,
+      "examples": []
+    },
+    "DATE": {
+      "labelled": 4555,
+      "changed": 0,
+      "changedPct": 0,
+      "examples": []
+    },
+    "TIME": {
+      "labelled": 2883,
+      "changed": 1,
+      "changedPct": 0,
+      "examples": [
+        "16"
+      ]
+    },
+    "BUILDINGNUMBER": {
+      "labelled": 2714,
+      "changed": 7,
+      "changedPct": 0.3,
+      "examples": [
+        "56414",
+        "427",
+        "3521",
+        "769"
+      ]
+    },
+    "ZIPCODE": {
+      "labelled": 2322,
+      "changed": 21,
+      "changedPct": 0.9,
+      "examples": [
+        "25228-9208",
+        "05381-2927",
+        "92441-1048",
+        "33074-2073"
+      ]
+    },
+    "AGE": {
+      "labelled": 2370,
+      "changed": 0,
+      "changedPct": 0,
+      "examples": []
+    }
+  }
+}

@@ -1,0 +1,10 @@
+.gcloudignore
+.git
+.env
+.env.*
+.claude
+node_modules
+data/*
+!data/benchmark.json
+!data/adversarial.json
+*.log

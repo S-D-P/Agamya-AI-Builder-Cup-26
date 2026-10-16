@@ -1,0 +1,11 @@
+node_modules/
+.env
+# Local database, uploaded media and generated objects never leave the machine.
+data/*
+# Measured evidence is versioned so the claims in the docs can be checked.
+!data/benchmark.json
+!data/adversarial.json
+!data/eval-redaction.json
+!data/eval-workmap.json
+!data/eval/
+!data/storage-benchmark.json

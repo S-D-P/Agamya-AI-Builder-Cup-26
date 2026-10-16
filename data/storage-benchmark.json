@@ -1,0 +1,71 @@
+{
+  "at": "2026-10-14T17:55:14.288Z",
+  "method": "offline, scripted model, real capture pipeline; baseline and optimised measured on the same runs",
+  "perWorkflow": [
+    {
+      "workflow": "Legacy payment operations",
+      "sessions": 2,
+      "uploads": 14,
+      "baselineStoredBytes": 217702,
+      "optimisedStoredBytes": 108851,
+      "reusedUploads": 7,
+      "visualObservations": 14,
+      "baselineSentToModel": 14,
+      "optimisedSentToModel": 0,
+      "decisions": {
+        "evidence_only": 14
+      }
+    },
+    {
+      "workflow": "Hand-loom weaving",
+      "sessions": 2,
+      "uploads": 26,
+      "baselineStoredBytes": 940788,
+      "optimisedStoredBytes": 470394,
+      "reusedUploads": 13,
+      "visualObservations": 26,
+      "baselineSentToModel": 26,
+      "optimisedSentToModel": 16,
+      "decisions": {
+        "vision": 16,
+        "drop_stable": 10
+      }
+    },
+    {
+      "workflow": "Amma's ghee",
+      "sessions": 2,
+      "uploads": 16,
+      "baselineStoredBytes": 665968,
+      "optimisedStoredBytes": 332984,
+      "reusedUploads": 8,
+      "visualObservations": 16,
+      "baselineSentToModel": 16,
+      "optimisedSentToModel": 14,
+      "decisions": {
+        "vision": 14,
+        "drop_stable": 2
+      }
+    }
+  ],
+  "totals": {
+    "storedBytes": {
+      "baseline": 1824458,
+      "optimised": 912229,
+      "reductionPct": 50
+    },
+    "visualObservationsSentToModel": {
+      "baseline": 56,
+      "optimised": 30,
+      "reductionPct": 46.4
+    },
+    "askModelCalls": {
+      "baseline": 5,
+      "optimised": 1
+    }
+  },
+  "caveats": [
+    "The scenario deliberately repeats each capture once; real-world reuse depends on how often identical bytes recur (re-uploads, retries, identical documents).",
+    "Simulated frames are small rendered images; storage ratios on real camera or screen media will differ.",
+    "Observation planning savings (frames not sent to the model) come from the change-based sampler; tokens are measured in the live benchmark, not here."
+  ]
+}

@@ -1,0 +1,12 @@
+node_modules
+data
+!data/benchmark.json
+!data/adversarial.json
+.env
+.env.*
+.claude
+.git
+tests
+scripts
+docs
+*.log

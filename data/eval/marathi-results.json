@@ -1,0 +1,417 @@
+{
+  "at": "2026-10-14T04:14:54.424Z",
+  "model": "gemini-2.5-flash",
+  "reviewedByNativeSpeaker": false,
+  "summary": {
+    "pass": 8,
+    "fail": 0,
+    "notEvaluated": 0
+  },
+  "usage": {
+    "calls": 12,
+    "failedCalls": 0,
+    "costUsd": 0.02187
+  },
+  "results": [
+    {
+      "id": "mr-ordinary",
+      "category": "ordinary Marathi",
+      "outcome": "pass",
+      "checks": [
+        {
+          "name": "question in Devanagari",
+          "ok": true
+        },
+        {
+          "name": "expert-stated values in Devanagari (not translated)",
+          "ok": true
+        },
+        {
+          "name": "every expert-stated quote verbatim from the answer",
+          "ok": true
+        },
+        {
+          "name": "no literal 'berry' in any English rendering",
+          "ok": true
+        }
+      ],
+      "detail": {
+        "question": "तुम्ही 11 मिनिटांनी गॅस का बंद केलात, 20 मिनिटांपर्यंत का नाही थांबलात?",
+        "fields": {
+          "context": {
+            "value": "लोण्यापासून तूप बनवताना",
+            "valueEn": "When making ghee from butter",
+            "status": "AI_INFERRED",
+            "quote": ""
+          },
+          "observation": {
+            "value": "तळाशी बेरी सोनेरी झाली आणि फेस खाली बसला",
+            "valueEn": "The solids at the bottom turned golden and the foam settled",
+            "status": "EXPERT_STATED",
+            "quote": "तळाशी बेरी सोनेरी झाली आणि फेस खाली बसला की तूप तयार झालं."
+          },
+          "decision": {
+            "value": "गॅस बंद करा",
+            "valueEn": "Turn off the gas",
+            "status": "EXPERT_STATED",
+            "quote": "घड्याळाकडे बघू नकोस. तळाशी बेरी सोनेरी झाली आणि फेस खाली बसला की तूप तयार झालं."
+          },
+          "reason": {
+            "value": "बेरी करपते आणि तुपाला करपट वास येतो",
+            "valueEn": "The solids will burn and the ghee will have a burnt smell",
+            "status": "EXPERT_STATED",
+            "quote": "वीस मिनिटं थांबलीस तर बेरी करपते आणि तुपाला करपट वास येतो."
+          },
+          "condition": {
+            "value": "तळाशी बेरी सोनेरी झाली आणि फेस खाली बसला",
+            "valueEn": "The solids at the bottom have turned golden and the foam has settled",
+            "status": "EXPERT_STATED",
+            "quote": "तळाशी बेरी सोनेरी झाली आणि फेस खाली बसला की तूप तयार झालं."
+          },
+          "boundary": {
+            "value": "तळाशी बेरी सोनेरी होणे आणि फेस खाली बसणे",
+            "valueEn": "The solids at the bottom turning golden and the foam settling",
+            "status": "EXPERT_STATED",
+            "quote": "तळाशी बेरी सोनेरी झाली आणि फेस खाली बसला की तूप तयार झालं."
+          },
+          "risk": {
+            "value": "बेरी करपते आणि तुपाला करपट वास येतो",
+            "valueEn": "The solids will burn and the ghee will have a burnt smell",
+            "status": "EXPERT_STATED",
+            "quote": "वीस मिनिटं थांबलीस तर बेरी करपते आणि तुपाला करपट वास येतो."
+          },
+          "expectedOutcome": {
+            "value": "तूप तयार होते",
+            "valueEn": "Ghee is ready",
+            "status": "EXPERT_STATED",
+            "quote": "तळाशी बेरी सोनेरी झाली आणि फेस खाली बसला की तूप तयार झालं."
+          }
+        }
+      }
+    },
+    {
+      "id": "mr-codeswitch",
+      "category": "code-switching (Marathi + English)",
+      "outcome": "pass",
+      "checks": [
+        {
+          "name": "question in Devanagari",
+          "ok": true
+        },
+        {
+          "name": "expert-stated values in Devanagari (not translated)",
+          "ok": true
+        },
+        {
+          "name": "every expert-stated quote verbatim from the answer",
+          "ok": true
+        },
+        {
+          "name": "no literal 'berry' in any English rendering",
+          "ok": true
+        }
+      ],
+      "detail": {
+        "question": "तुम्ही 11 मिनिटांनी गॅस का बंद केलात, 20 मिनिटांपर्यंत का नाही थांबलात?",
+        "fields": {
+          "context": {
+            "value": "लोण्यापासून तूप बनवणे",
+            "valueEn": "Making ghee from butter",
+            "status": "AI_INFERRED",
+            "quote": ""
+          },
+          "observation": {
+            "value": "तळाशी असलेल्या घन पदार्थांचा रंग",
+            "valueEn": "Color of the solids at the bottom",
+            "status": "EXPERT_STATED",
+            "quote": "मी नेहमी colour बघते"
+          },
+          "decision": {
+            "value": "गॅस बंद करणे",
+            "valueEn": "Turn off the flame",
+            "status": "OBSERVED",
+            "quote": ""
+          },
+          "reason": {
+            "value": "लोण्यातील पाण्याचे प्रमाण वेगवेगळे असते, त्यामुळे वेळ महत्त्वाचा नाही; घन पदार्थांचा रंग योग्य शिजल्याचे दर्शवतो.",
+            "valueEn": "The water content in butter varies, so time is not important; the color of the solids indicates proper cooking.",
+            "status": "EXPERT_STATED",
+            "quote": "Store-bought लोण्यात पाणी जास्त असतं, so it takes longer. मी नेहमी colour बघते, time नाही."
+          },
+          "condition": {
+            "value": "तळाशी असलेले घन पदार्थ हलके सोनेरी रंगाचे झाले आहेत.",
+            "valueEn": "The solids at the bottom have turned light golden.",
+            "status": "OBSERVED",
+            "quote": ""
+          },
+          "exception": {
+            "value": "INSUFFICIENT_EVIDENCE",
+            "valueEn": "",
+            "status": "INSUFFICIENT_EVIDENCE",
+            "quote": ""
+          },
+          "boundary": {
+            "value": "तळाशी असलेले घन पदार्थ हलके सोनेरी होणे.",
+            "valueEn": "Solids at the bottom turning light golden.",
+            "status": "OBSERVED",
+            "quote": ""
+          },
+          "risk": {
+            "value": "जर फक्त वेळेनुसार गॅस बंद केला तर तूप जास्त शिजले जाऊ शकते किंवा जळू शकते.",
+            "valueEn": "If the flame is turned off only by time, the ghee might be overcooked or burned.",
+            "status": "AI_INFERRED",
+            "quote": ""
+          },
+          "expectedOutcome": {
+            "value": "योग्य प्रकारे शिजलेले तूप",
+            "valueEn": "Properly cooked ghee",
+            "status": "AI_INFERRED",
+            "quote": ""
+          }
+        }
+      }
+    },
+    {
+      "id": "mr-trap",
+      "category": "domain term / literal-translation trap",
+      "outcome": "pass",
+      "checks": [
+        {
+          "name": "question in Devanagari",
+          "ok": true
+        },
+        {
+          "name": "expert-stated values in Devanagari (not translated)",
+          "ok": true
+        },
+        {
+          "name": "every expert-stated quote verbatim from the answer",
+          "ok": true
+        },
+        {
+          "name": "no literal 'berry' in any English rendering",
+          "ok": true
+        },
+        {
+          "name": "'बेरी' kept in a Marathi value",
+          "ok": true
+        }
+      ],
+      "detail": {
+        "question": "तुम्ही 11 मिनिटांनी गॅस का बंद केलात, 20 मिनिटे थांबण्याऐवजी?",
+        "fields": {
+          "context": {
+            "value": "तूप बनवताना",
+            "valueEn": "While making ghee",
+            "status": "AI_INFERRED",
+            "quote": ""
+          },
+          "observation": {
+            "value": "बेरी जरा तांबूस झाली",
+            "valueEn": "The solids turned reddish-brown",
+            "status": "EXPERT_STATED",
+            "quote": "बेरी जरा तांबूस झाली"
+          },
+          "decision": {
+            "value": "लगेच गॅस बंद कर",
+            "valueEn": "Turn off the gas immediately",
+            "status": "EXPERT_STATED",
+            "quote": "लगेच गॅस बंद कर"
+          },
+          "reason": {
+            "value": "नाहीतर तूप कडू होतं",
+            "valueEn": "Otherwise, the ghee becomes bitter",
+            "status": "EXPERT_STATED",
+            "quote": "नाहीतर तूप कडू होतं"
+          },
+          "condition": {
+            "value": "बेरी जरा तांबूस झाली",
+            "valueEn": "The solids turned reddish-brown",
+            "status": "EXPERT_STATED",
+            "quote": "बेरी जरा तांबूस झाली"
+          },
+          "exception": {
+            "value": "INSUFFICIENT_EVIDENCE",
+            "valueEn": "",
+            "status": "INSUFFICIENT_EVIDENCE",
+            "quote": ""
+          },
+          "boundary": {
+            "value": "बेरीचा रंग तांबूस होणे",
+            "valueEn": "The color of the solids turning reddish-brown",
+            "status": "AI_INFERRED",
+            "quote": "बेरी जरा तांबूस झाली"
+          },
+          "risk": {
+            "value": "तूप कडू होतं",
+            "valueEn": "The ghee becomes bitter",
+            "status": "EXPERT_STATED",
+            "quote": "नाहीतर तूप कडू होतं"
+          },
+          "expectedOutcome": {
+            "value": "तूप कडू होणार नाही",
+            "valueEn": "The ghee will not become bitter",
+            "status": "AI_INFERRED",
+            "quote": "नाहीतर तूप कडू होतं"
+          }
+        }
+      }
+    },
+    {
+      "id": "ask-grounded",
+      "category": "learner question, covered by the knowledge",
+      "outcome": "pass",
+      "checks": [
+        {
+          "name": "reply in Devanagari",
+          "ok": true
+        },
+        {
+          "name": "grounded with a verified citation",
+          "ok": true
+        },
+        {
+          "name": "answer points to the colour, not the time",
+          "ok": true
+        }
+      ],
+      "detail": {
+        "answer": "नाही, तूप घड्याळावरून नाही, तर तळाच्या बेरीच्या रंगावरून ओळखायचं. दुकानातल्या लोण्यात पाणी जास्त असल्यामुळे त्याला जास्त वेळ लागतो आणि बेरी पांढरी असेल तर अजून कढवत राहायचं.",
+        "grounded": true,
+        "insufficient": false,
+        "needsClarification": false,
+        "citations": [
+          {
+            "judgmentId": "eval",
+            "title": "तूप कधी तयार होतं",
+            "quote": "नियम: तूप घड्याळावरून नाही, तर तळाच्या बेरीच्या रंगावरून ओळखायचं.",
+            "expertName": "Lakshmi"
+          },
+          {
+            "judgmentId": "eval",
+            "title": "तूप कधी तयार होतं",
+            "quote": "अट: दुकानातल्या लोण्यात पाणी जास्त असतं, त्यामुळे जास्त वेळ लागतो; बेरी पांढरी असेल तर अजून कढवत राहायचं.",
+            "expertName": "Lakshmi"
+          }
+        ],
+        "droppedCitations": 0
+      }
+    },
+    {
+      "id": "ask-codeswitch",
+      "category": "learner question with code-switching",
+      "outcome": "pass",
+      "checks": [
+        {
+          "name": "reply in Devanagari",
+          "ok": true
+        },
+        {
+          "name": "grounded with a verified citation",
+          "ok": true
+        }
+      ],
+      "detail": {
+        "answer": "कढीपत्ता टाकल्यावर लगेच तडतडला तर पाणी संपलं आहे हे बघायचं.",
+        "grounded": true,
+        "insufficient": false,
+        "needsClarification": false,
+        "citations": [
+          {
+            "judgmentId": "eval",
+            "title": "तूप कधी तयार होतं",
+            "quote": "तपासणी: कढीपत्ता टाकल्यावर लगेच तडतडला तर पाणी संपलं आहे.",
+            "expertName": "Lakshmi"
+          }
+        ],
+        "droppedCitations": 0
+      }
+    },
+    {
+      "id": "ask-ambiguous",
+      "category": "ambiguity",
+      "outcome": "pass",
+      "checks": [
+        {
+          "name": "reply in Devanagari",
+          "ok": true
+        },
+        {
+          "name": "grounded or asks to clarify (never invents)",
+          "ok": true
+        }
+      ],
+      "detail": {
+        "answer": "तूप तयार झाले आहे हे तळाशी असलेली बेरी सोनेरी झाली आणि फेस खाली बसला की समजते. तसेच, कढीपत्ता टाकल्यावर तो लगेच तडतडला तर पाणी संपले आहे असे समजावे. या लक्षणांवरून तुम्ही तूप कढवणे बंद करू शकता.",
+        "grounded": true,
+        "insufficient": false,
+        "needsClarification": false,
+        "citations": [
+          {
+            "judgmentId": "eval",
+            "title": "तूप कधी तयार होतं",
+            "quote": "निरीक्षण: तळाशी बेरी सोनेरी झाली आणि फेस खाली बसला की तूप तयार झालं.",
+            "expertName": "Lakshmi"
+          },
+          {
+            "judgmentId": "eval",
+            "title": "तूप कधी तयार होतं",
+            "quote": "तपासणी: कढीपत्ता टाकल्यावर लगेच तडतडला तर पाणी संपलं आहे.",
+            "expertName": "Lakshmi"
+          }
+        ],
+        "droppedCitations": 0
+      }
+    },
+    {
+      "id": "ask-unsupported",
+      "category": "not covered (insufficient evidence)",
+      "outcome": "pass",
+      "checks": [
+        {
+          "name": "reply in Devanagari",
+          "ok": true
+        },
+        {
+          "name": "says it is not covered (no confident answer)",
+          "ok": true
+        }
+      ],
+      "detail": {
+        "answer": "या प्रश्नाचे उत्तर देण्यासाठी माझ्याकडे पुरेशी माहिती उपलब्ध नाही. कृपया तुमच्या शिक्षकांशी किंवा तज्ञांशी संपर्क साधा.",
+        "grounded": false,
+        "insufficient": true,
+        "needsClarification": false,
+        "citations": [],
+        "droppedCitations": 0
+      }
+    },
+    {
+      "id": "tts-roundtrip",
+      "category": "speech round trip (Gemini TTS → transcription)",
+      "outcome": "pass",
+      "checks": [
+        {
+          "name": "transcript in Devanagari",
+          "ok": true
+        },
+        {
+          "name": "character overlap ≥ 0.8",
+          "ok": true
+        },
+        {
+          "name": "language reported as mr",
+          "ok": true
+        }
+      ],
+      "detail": {
+        "spoken": "बेरी सोनेरी झाली आणि फेस खाली बसला की तूप तयार झालं.",
+        "transcript": "बेरी सोनेरी झाली आणि फेस खाली बसला की तूप तयार झालं.",
+        "language": "mr",
+        "confidence": 0.9,
+        "overlap": 1,
+        "caveat": "Synthetic speech from the same provider is far easier than a real speaker; this tests the pipeline, not real-world accuracy."
+      }
+    }
+  ]
+}
