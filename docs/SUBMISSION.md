@@ -4,7 +4,7 @@
 
 ## Deployed prototype
 
-**URL:** https://agamya-82538920788.us-central1.run.app (verified October 14, 2026: `/readyz` reports Cloud SQL, Cloud Storage and Vertex AI ready; landing, sample space, kitchen capture, live detection and questions work). Known issue: Vertex AI intermittently returned 429 (resource exhausted) and timeouts on this project; a retry is implemented locally and needs one more deploy.
+**URL:** https://agamya-82538920788.us-central1.run.app (verified October 16, 2026). `/readyz` reports Cloud SQL, Cloud Storage and Vertex AI ready, and a live Moti session ran end to end through Cloud Run: Gemini Live voice, the question at a pause, and a Work Map with verified quotes. Judge accounts are on the sign-in page (see README).
 
 > **Deployment status (October 15, 2026), round 2:** Personal and Enterprise spaces, KT missions, groups, in-app notifications, storage reuse and the Ask cache are implemented and pass 146/146 offline tests. The mission flows were also verified live against Vertex AI from a local server. **Not deployed.** Migration 004 has been verified on PGlite only.
 >
