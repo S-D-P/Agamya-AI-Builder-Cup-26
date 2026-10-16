@@ -261,11 +261,27 @@ export function createIdentity({ db, cfg }) {
       });
     },
 
+    /** What the join page needs to explain the next step (only to the holder of the link). */
+    async inviteInfo(token) {
+      return db.system(async (q) => {
+        const [inv] = await q(`SELECT i.email, i.expires_at, o.name AS space_name, o.experience, u.display_name AS invited_by,
+                                      EXISTS (SELECT 1 FROM users x WHERE lower(x.email) = lower(i.email)) AS has_account
+                               FROM invitations i JOIN organizations o ON o.id = i.org_id LEFT JOIN users u ON u.id = i.invited_by
+                               WHERE i.token_hash = $1 AND i.status = 'pending' AND i.accepted_at IS NULL AND i.expires_at > now()`, [sha256(String(token ?? ""))]);
+        if (!inv) throw httpError(404, "this invitation is invalid, already used or expired: ask for a new one");
+        return { email: inv.email, spaceName: inv.space_name, experience: inv.experience, invitedBy: inv.invited_by, hasAccount: inv.has_account, expiresAt: inv.expires_at };
+      });
+    },
+
     async acceptInvite({ token, displayName, password, ip, ua, requestId }) {
       return db.system(async (q) => {
         const [inv] = await q("SELECT * FROM invitations WHERE token_hash = $1 AND status = 'pending' AND accepted_at IS NULL AND expires_at > now()", [sha256(String(token ?? ""))]);
         if (!inv) throw httpError(404, "invitation is invalid or expired");
         let [user] = await q("SELECT * FROM users WHERE lower(email) = $1", [inv.email]);
+        // An existing account must prove it is theirs: the link alone never signs anyone in to an existing account
+        // (otherwise whoever held the link could enter that person's account and every space they belong to).
+        if (user && !user.password_hash) throw httpError(403, "this email already has an account that signs in another way: sign in, then accept the invitation from your Invitations page");
+        if (user && !(await verifyPassword(String(password ?? ""), user.password_hash))) throw httpError(401, "this email already has an Agamya account: enter that account's password to join");
         if (!user) {
           const problems = passwordProblems(password, inv.email);
           if (problems.length) throw httpError(400, `password: ${problems.join("; ")}`);

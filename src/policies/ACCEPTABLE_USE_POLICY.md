@@ -1,5 +1,10 @@
-> **Template, not legal advice.**
+# Acceptable Use Policy
 
-# Acceptable Use Policy (template)
+Do not use Agamya to:
 
-Do not use the platform to: covertly monitor people; capture content you are not authorized to capture; attempt to access another organization's data; attempt to manipulate the AI through captured content; upload malware or active documents; evaluate individuals for employment decisions without your organization's approved process.
+- monitor people without their knowledge;
+- capture content you are not allowed to capture;
+- try to access another space's data;
+- try to manipulate the AI through captured content;
+- upload malware or harmful documents;
+- judge individuals for employment decisions outside your organization's approved process.

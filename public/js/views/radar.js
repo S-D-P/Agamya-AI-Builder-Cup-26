@@ -1,6 +1,7 @@
 // KNOWLEDGE LOSS RADAR: for each workflow, what is at risk, what records say so, and what to do next.
 // Status comes from explicit rules over real records (docs/RADAR.md). There is no score, ranking or prediction, and when
 // there are not enough records the status says "insufficient evidence" instead of guessing.
+import { requestButton } from "./access.js";
 import { api, esc, render, toast, isSample } from "../core.js";
 import { icon } from "../icons.js";
 import { t } from "../i18n.js";
@@ -36,7 +37,7 @@ function card(w) {
     <dl class="kv small radar-facts"><dt>Documents</dt><dd>${f.documents}</dd><dt>Capture sessions</dt><dd>${f.sessions}</dd><dt>Approved knowledge</dt><dd>${f.approved}${f.privateApproved ? ` (${f.privateApproved} private)` : ""}</dd>
       <dt>People holding it</dt><dd>${f.holders}</dd><dt>Experts / learners</dt><dd>${f.experts} / ${f.learners}</dd></dl>
     ${w.findings.length ? `<div class="stack">${w.findings.map((x) => `<section class="finding" aria-label="${esc(x.label)}"><h3 class="small">${esc(x.label)} <span class="muted">(${x.count})</span></h3>
-      <ul class="plain small">${x.records.map((r) => `<li>${r.judgmentId ? `<a href="#/knowledge/${r.judgmentId}">${esc(r.title)}</a>` : esc(r.title)}${r.expertName ? ` · ${esc(r.expertName)}` : ""}${r.learner ? ` · learner ${esc(r.learner)}` : ""}${r.detail ? `: <span class="muted">${esc(r.detail)}</span>` : ""}</li>`).join("")}</ul>
+      <ul class="plain small">${x.records.map((r) => `<li>${r.judgmentId ? `<a href="#/knowledge/${r.judgmentId}">${esc(r.title)}</a>` : `${esc(r.title)} ${requestButton(r.requestArtifactId)}`}${r.expertName ? ` · ${esc(r.expertName)}` : ""}${r.learner ? ` · learner ${esc(r.learner)}` : ""}${r.detail ? `: <span class="muted">${esc(r.detail)}</span>` : ""}</li>`).join("")}</ul>
       <p class="small"><b>Next:</b> ${x.action.href ? `<a href="#/${esc(x.action.href)}">${esc(x.action.label)}</a>` : esc(x.action.label)}</p></section>`).join("")}</div>`
       : w.status === "insufficient_evidence" ? `<p class="small"><b>Next:</b> <a href="#/capture">Capture how an expert does this work</a></p>` : ""}
   </article>`;

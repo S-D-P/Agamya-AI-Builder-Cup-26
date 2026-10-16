@@ -3,7 +3,7 @@
 //   #/map/:sessionId                  the Work Map, the voice debrief + teach-back, confirmation, export for agents
 //   #/practice/:sessionId             a new hire practises on their own screen; Moti tutors from the confirmed map
 // Every live screen has a typed alternative to speaking, an off-the-record control, and a visible, announced state.
-import { state, api, esc, render, toast, go, isLiving } from "../core.js";
+import { state, api, esc, render, toast, go, isLiving, ago, route } from "../core.js";
 import { icon } from "../icons.js";
 import { orb } from "../persona.js";
 import { announce } from "../a11y.js";
@@ -14,10 +14,25 @@ let live = null, mapTimer = null, view = { lines: [], status: "idle", offRecord:
 const STATE_WORDS = { idle: "Not started", starting: "Starting", live: "Moti is listening", speaking: "Moti is speaking", ending: "Wrapping up", closed: "Disconnected", ended: "Ended" };
 const LANG_OPTIONS = [...LANGS, { code: "hi", name: "Hindi", native: "हिन्दी" }, { code: "kn", name: "Kannada", native: "ಕನ್ನಡ" }];
 
-export function leaveNow() { clearTimeout(mapTimer); if (live) { live.close(); live = null; } view = { lines: [], status: "idle", offRecord: false, consent: null, map: null, run: null, moment: null, error: null }; }
+/** After each render: keep the camera / screen visible (the <video> element is new every time the page re-renders). */
+let videoNode = null;
+export function nowAfterRender() {
+  const fresh = document.getElementById("now-video");
+  if (!fresh || !live?.attachVideo) { if (!fresh) videoNode = null; return; }
+  // Move the already-playing element into the new page instead of starting a new one: no black flash, no lost stream.
+  if (videoNode && videoNode !== fresh && videoNode.srcObject) { fresh.replaceWith(videoNode); videoNode.play?.().catch(() => {}); live.attachVideo(videoNode); return; }
+  live.attachVideo(fresh); if (fresh.srcObject) videoNode = fresh;
+}
+
+// Detach first, then close: closing reports "ended", and a report must never re-enter leaveNow (that recursed until
+// the call stack overflowed when someone navigated away mid-session).
+/** True while a live capture or practice is running: page-level Back is hidden so it cannot end it by accident. */
+export const nowBusy = () => Boolean(live) && !["idle", "ended", "closed"].includes(view.status);
+
+export function leaveNow() { clearTimeout(mapTimer); videoNode = null; const old = live; live = null; old?.close(); view = { lines: [], status: "idle", offRecord: false, consent: null, map: null, run: null, moment: null, error: null }; }
 
 function shell(inner, { dark = true } = {}) {
-  return `<div class="now ${dark ? "dark" : ""}"><header class="now-head"><a class="now-brand" href="#/">${orb("observing", 26, { caption: false })}<span>Agamya</span></a>
+  return `<div class="now-root ${dark ? "dark" : ""}"><header class="now-head"><a class="now-brand" href="#/">${orb("observing", 26, { caption: false })}<span>Agamya</span></a>
     <span class="spacer"></span>${STATE_WORDS[view.status] && view.status !== "idle" ? `<span class="now-state" role="status"><span class="dot-live ${view.status}" aria-hidden="true"></span>${esc(live instanceof TypedMoti && view.status === "live" ? "Typed session" : STATE_WORDS[view.status])}</span>` : ""}
     <a class="btn ghost sm" href="#/">Home</a></header><main id="main" tabindex="-1" class="now-main">${inner}</main></div>`;
 }
@@ -51,6 +66,7 @@ export function startView(r) {
       ${conversation()}
       ${typeBox()}
       <div class="row wrap now-controls"><button class="sm" data-act="now-offrec" aria-pressed="${view.offRecord}">${view.offRecord ? "Back on the record" : "Off the record"}</button>
+        <button class="ghost sm" data-act="terminate-session" data-id="${view.sessionId ?? ""}">Terminate</button>
         <button class="primary sm" data-act="now-finish" ${view.status === "ending" ? "disabled" : ""}>I'm done</button></div>
     </aside></div>`);
 }
@@ -72,17 +88,19 @@ class TypedMoti {
 const voiceReady = () => state.config?.ai === "vertex" && liveSupport().mic;
 
 function connect(o) {
-  live = new (voiceReady() || o.mode === "tutor" ? LiveMoti : TypedMoti)({ ...o,
-    onMoti: (text) => { view.lines.push({ who: "moti", text }); announce(`Moti: ${text}`); render(); },
-    onYou: (text) => { view.lines.push({ who: "you", text }); render(); },
-    onStatus: (m) => { if (m.offRecord !== undefined) { view.offRecord = m.offRecord; announce(m.offRecord ? "Off the record." : "Back on the record."); }
+  // Every callback checks that this session is still the active one: a closed session's late events are ignored.
+  const mine = (fn) => (...a) => { if (live === me) fn(...a); };
+  const me = live = new (voiceReady() || o.mode === "tutor" ? LiveMoti : TypedMoti)({ ...o,
+    onMoti: mine((text) => { view.lines.push({ who: "moti", text }); announce(`Moti: ${text}`); render(); }),
+    onYou: mine((text) => { view.lines.push({ who: "you", text }); render(); }),
+    onStatus: mine((m) => { if (m.offRecord !== undefined) { view.offRecord = m.offRecord; announce(m.offRecord ? "Off the record." : "Back on the record."); }
       if (m.phaseDone) { const id = o.sessionId; leaveNow(); go(`#/map/${id}`); return; }
       if (m.finished) { view.run = { result: m.finished }; announce("Practice finished."); }
       if (m.intervention) announce("Moti stopped a decision. Listen to why.");
-      render(); },
-    onMoment: (m) => { view.moment = m; announce(`Showing how the expert did step: ${m.title}`); render(); },
-    onError: (msg) => { view.error = msg; toast(msg, true); render(); },
-    onState: (s) => { view.status = s; render(); },
+      render(); }),
+    onMoment: mine((m) => { view.moment = m; announce(`Showing how the expert did step: ${m.title}`); render(); }),
+    onError: mine((msg) => { view.error = msg; toast(msg, true); render(); }),
+    onState: mine((s) => { view.status = s; render(); }),
   });
   return live;
 }
@@ -93,7 +111,8 @@ export function mapView(r) {
   if (!view.map || view.map.sessionId !== id) { loadMap(id); return shell(`<span class="thinking">Loading the Work Map</span>`, { dark: false }); }
   const m = view.map;
   if (m.error) return shell(`<section class="now-wait"><h1>Work Map not available</h1><p class="muted">${esc(m.error)}</p><a class="btn" href="#/">Home</a></section>`, { dark: false });
-  if (!m.steps && !m.building) return shell(`<section class="now-wait"><h1>No Work Map yet</h1><p class="muted">This session ${m.status === "capturing" ? "is still open. Start it again from Home, or finish it to build the map." : "ended without enough to build a map."}</p><a class="btn" href="#/">Home</a></section>`, { dark: false });
+  if (!m.steps && !m.building) return shell(`<section class="now-wait"><h1>No Work Map yet</h1><p class="muted">This session ${m.status === "capturing" ? "was not finished. Build the map from what was recorded, or terminate it." : "ended without enough to build a map."}</p>
+    <div class="row">${m.status === "capturing" ? `<button class="primary" data-act="finish-session" data-id="${m.sessionId}">Build the Work Map</button><button class="ghost" data-act="terminate-session" data-id="${m.sessionId}">Terminate</button>` : ""}<a class="btn" href="#/">Home</a></div></section>`, { dark: false });
   if (m.building || !m.steps) { clearTimeout(mapTimer); mapTimer = setTimeout(() => loadMap(id), 2500); return shell(`<section class="now-wait">${orb("thinking", 72)}<h1>Building your Work Map</h1><p class="muted">Moti is putting the steps, reasons and guardrails together from what you showed and said.</p></section>`, { dark: false }); }
   const inDebrief = live && live.mode === "debrief";
   return shell(`<section class="map" aria-labelledby="map-h">
@@ -167,7 +186,14 @@ export async function nowClick(e) {
       view.status = "starting"; view.sessionId = s.sessionId; state.busy = null; render();
       await connect({ mode: "capture", sessionId: s.sessionId, language, video: kind }).start(document.getElementById("now-video"));
       announce(voiceReady() ? "Moti is listening. Work as you normally would." : "Live voice is unavailable here. Type what you are doing and why.");
-    } catch (err) { state.busy = null; view.status = "idle"; leaveNow(); toast(err.message || "Could not start", true); render(); }
+    } catch (err) {
+      // Nothing was recorded (for example the microphone or screen permission was refused): do not leave an empty
+      // "recording" session behind.
+      const sid = view.sessionId; state.busy = null; leaveNow();
+      if (sid) api("POST", `/api/sessions/${sid}/terminate`, { confirm: true }).catch(() => {});
+      const denied = /Permission|NotAllowed|denied/i.test(`${err.name} ${err.message}`);
+      toast(denied ? "Agamya needs permission to use the microphone and your screen or camera. Allow it in the browser and try again." : err.message || "Could not start", true); render();
+    }
     return true;
   }
   if (a === "now-offrec") { live?.setOffRecord(!view.offRecord); return true; }
@@ -198,21 +224,61 @@ export async function nowClick(e) {
   }
   if (a === "practice-finish") { live?.say("I'm finished."); return true; }
   if (a === "moment-close") { view.moment = null; render(); return true; }
+  if (a === "finish-session") {
+    try {
+      await api("POST", `/api/live/${el.dataset.id}/finish`, { phase: "capture" });
+      announce("Building the Work Map."); maps = null; sessions = null; view.map = null; go(`#/map/${el.dataset.id}`); render();
+    } catch (err) { toast(err.message, true); }
+    return true;
+  }
+  if (a === "terminate-session") {
+    const id = el.dataset.id || view.sessionId;
+    if (!id || !confirm(`Terminate ${el.dataset.title ? `"${el.dataset.title}"` : "this session"}? Recording stops, what was captured is removed, and it cannot be resumed.`)) return true;
+    try {
+      if (live && view.sessionId === id) leaveNow();
+      await api("POST", `/api/sessions/${id}/terminate`, { confirm: true });
+      announce("Session terminated."); toast("Session terminated.");
+      maps = null; sessions = null;
+      if (route().name === "start") go("#/"); else render();
+    } catch (err) { toast(err.message, true); }
+    return true;
+  }
   return false;
 }
 
 /** Signed-in home: one action, then your maps. Enterprise tools stay in the menu. */
 let maps = null;
+const SESSION_WORDS = { awaiting_consent: "Waiting for consent", capturing: "Recording (not finished)", processing: "Processing", analyzing: "Analysing", asking: "Moti has a question",
+  extracting: "Drafting knowledge", validating: "Waiting for your review", done: "Done", no_judgment: "Done (nothing to confirm)", failed: "Failed", mapping: "Building the Work Map",
+  debrief: "Ready: answer Moti's questions and confirm", mapped: "Confirmed Work Map" };
+const UNFINISHED = new Set(["awaiting_consent", "capturing", "processing", "analyzing", "asking", "extracting", "validating", "mapping", "debrief", "failed"]);
+let sessions = null, sessionsTimer = null;
+function loadSessions() {
+  api("GET", "/api/my/sessions").then((x) => {
+    sessions = x; render();
+    // While something is still being built, refresh quietly so the status changes without a reload.
+    clearTimeout(sessionsTimer);
+    if (x.some((y) => ["mapping", "processing", "analyzing", "extracting"].includes(y.status))) sessionsTimer = setTimeout(() => { if (location.hash === "" || location.hash === "#/") loadSessions(); }, 4000);
+  }).catch(() => { sessions = []; render(); });
+}
+
 export function homeNow() {
   if (!maps) { api("GET", "/api/maps").then((m) => { maps = m; render(); }).catch(() => { maps = []; render(); }); }
+  if (!sessions) { sessions = []; loadSessions(); }
   const work = !isLiving();
   return `<section class="home-now" aria-labelledby="hn-h"><h1 id="hn-h">${work ? "Capture how the work is really done" : "Show what you know"}</h1>
     <div class="row wrap">${work ? `<a class="btn primary lg" href="#/start/screen">${icon("screen", 18)} Start with your screen</a><a class="btn lg" href="#/start/camera">${icon("camera", 18)} Use the camera</a>`
       : `<a class="btn primary lg" href="#/start/camera">${icon("camera", 18)} Start with your camera</a><a class="btn lg" href="#/start/screen">${icon("screen", 18)} Share a screen</a>`}</div>
+    ${sessions.length ? `<h2 class="h3" style="margin-top:28px">Your recent sessions</h2>
+      <ul class="plain session-list">${sessions.map((x) => `<li><a href="${x.href}"><b>${esc(x.title)}</b></a>
+        <span class="tag ${x.status === "mapped" || x.status === "done" ? "green" : x.status === "failed" ? "red" : ""}">${esc(SESSION_WORDS[x.status] ?? x.status)}</span>
+        <span class="small muted">${ago(x.startedAt)}</span>
+        ${x.mode === "live" && x.status === "capturing" ? `<button class="sm" data-act="finish-session" data-id="${x.id}">Build the Work Map</button>` : ""}
+        ${UNFINISHED.has(x.status) ? `<button class="ghost sm" data-act="terminate-session" data-id="${x.id}" data-title="${esc(x.title)}">Terminate</button>` : ""}</li>`).join("")}</ul>` : ""}
     <h2 class="h3" style="margin-top:28px">Work Maps</h2>
     ${maps === null ? `<span class="thinking small">Loading</span>` : maps.length ? `<ul class="plain map-list">${maps.map((m) => `<li><a href="#/map/${m.sessionId}"><b>${esc(m.title)}</b></a> <span class="small muted">${esc(m.expertName)} · ${m.steps} steps · ${m.status === "confirmed" ? "confirmed" : "draft"}</span></li>`).join("")}</ul>`
       : `<p class="muted">None yet. Your first session becomes your first Work Map.</p>`}
   </section>`;
 }
-export function invalidateNow() { maps = null; }
+export function invalidateNow() { maps = null; sessions = null; }
 export { langName };

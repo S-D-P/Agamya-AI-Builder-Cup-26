@@ -46,6 +46,11 @@ export function createWorkMaps({ db, capture }) {
     });
   }
 
+  /** A session started from the live screens is a live session from its first moment (lists link it correctly). */
+  async function markLive(ctx, sessionId) {
+    return T(ctx, async (q) => { const s = await loadSession(q, sessionId); assertIsExpert(ctx, s); await q("UPDATE expert_sessions SET mode = 'live' WHERE id = $1", [s.id]); });
+  }
+
   /** Off the record: nothing is captured until the expert says so; the period itself is recorded (not its content). */
   async function setOffRecord(ctx, sessionId, on) {
     return T(ctx, async (q) => {
@@ -83,6 +88,7 @@ export function createWorkMaps({ db, capture }) {
       const [prev] = await q("SELECT * FROM work_maps WHERE session_id = $1", [s.id]);
       return { s, wf, obs, dialogue, prev };
     });
+    if (prep.s.status === "terminated") return { skipped: "terminated" };
     const events = prep.obs.filter((o) => o.modality !== "MICROPHONE" && o.text).map((o) => ({ id: `e${o.seq}`, at: new Date(o.captured_at).toISOString(), modality: o.modality, text: o.text }));
     const speech = prep.obs.filter((o) => o.modality === "MICROPHONE" && o.text).map((o) => ({ at: new Date(o.captured_at).toISOString(), text: o.text }));
     const m = await withAiContext({ orgId: ctx.orgId, sessionId, workflowId: prep.wf.id }, () =>
@@ -158,7 +164,8 @@ export function createWorkMaps({ db, capture }) {
     return T(ctx, async (q) => {
       const rows = await q(`SELECT w.id, w.session_id, w.title, w.status, w.version, w.visibility, w.shared_with, w.expert_person_id, w.created_at, w.confirmed_at, p.display_name AS expert_name, wf.name AS workflow_name,
                                    jsonb_array_length(w.map->'steps') AS steps
-                            FROM work_maps w JOIN people p ON p.id = w.expert_person_id JOIN workflows wf ON wf.id = w.workflow_id ORDER BY w.created_at DESC LIMIT 100`);
+                            FROM work_maps w JOIN people p ON p.id = w.expert_person_id JOIN workflows wf ON wf.id = w.workflow_id
+                            WHERE w.status <> 'withdrawn' AND wf.deleted_at IS NULL ORDER BY w.created_at DESC LIMIT 100`);
       const out = [];
       for (const r of rows) if (await readable(q, ctx, r)) out.push({ id: r.id, sessionId: r.session_id, title: r.title, status: r.status, version: r.version, steps: r.steps, expertName: r.expert_name, workflowName: r.workflow_name, mine: r.expert_person_id === ctx.personId, createdAt: r.created_at });
       return out;
@@ -215,5 +222,5 @@ export function createWorkMaps({ db, capture }) {
   }
   async function getRun(ctx, runId) { return T(ctx, (q) => loadRun(q, ctx, runId)); }
 
-  return { liveTurn, setOffRecord, finishPhase, get, confirm, list, exportForAgents, startTutor, recordIntervention, finishTutor, getRun, handlers: { build_work_map: buildJob } };
+  return { liveTurn, markLive, setOffRecord, finishPhase, get, confirm, list, exportForAgents, startTutor, recordIntervention, finishTutor, getRun, handlers: { build_work_map: buildJob } };
 }

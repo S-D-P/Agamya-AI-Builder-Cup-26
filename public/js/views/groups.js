@@ -11,7 +11,7 @@ export function invalidateGroups() { list = null; current = null; people = null;
 export function groupsView(r) {
   if (!list) { api("GET", "/api/groups").then((x) => { list = x; render(); }).catch((e) => toast(e.message, true)); return `<span class="thinking">Loading groups</span>`; }
   if (r.id && (!current || current.id !== r.id)) { api("GET", `/api/groups/${r.id}`).then((g) => { current = g; picking = new Set(); render(); }).catch((e) => { toast(e.message, true); go("#/groups"); }); }
-  if (r.id && people === null && list.groups.find((g) => g.id === r.id)?.canManage) { people = []; api("GET", "/api/people").then((p) => { people = p; render(); }); }
+  if (r.id && people === null && list.groups.find((g) => g.id === r.id)?.canManage) { people = []; api("GET", "/api/people").then((p) => { people = p; render(); }).catch(() => {}); }
   const living = isLiving();
   return `<div class="page-head"><div><h1>Groups</h1><p>${living ? "Family, friends, a learning circle: share selected knowledge with a group in one step. Being in a group never exposes anything that was not explicitly shared with it." : "Groups of people (for example Payments-New-Joiners) that a coordinator can assign to a mission in one step. These are Agamya groups; they are not synchronised with Google Cloud IAM, Entra ID or any other directory."}</p></div></div>
   <div class="knowledge-grid">

@@ -35,7 +35,8 @@ export function transfersView(r) {
 
 function planView() {
   if (!has("ORG_ADMIN", "WORKFLOW_OWNER")) return `<div class="card pad">Only managers and workflow owners can plan transfers.</div>`;
-  if (!people) { api("GET", "/api/people").then((p) => { people = p; render(); }); return `<span class="thinking">Loading</span>`; }
+  if (!people) { people = "loading"; api("GET", "/api/people").then((p) => { people = p; render(); }).catch(() => { people = []; render(); }); }
+  if (people === "loading") return `<span class="thinking">Loading</span>`;
   plan.workflowId ??= state.workflows[0]?.id;
   const experts = people.filter((p) => p.roles.includes("EXPERT")), learners = people.filter((p) => p.roles.includes("LEARNER"));
   return `<div class="page-head"><div><div class="eyebrow">New knowledge transfer</div><h1>Who should learn what, from whom?</h1><p>The expert will see this purpose, what will be captured, and who will see the result before anything is recorded.</p></div></div>

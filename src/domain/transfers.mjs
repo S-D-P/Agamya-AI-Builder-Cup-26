@@ -232,7 +232,7 @@ export function createTransfers({ db, capture }) {
                                    FROM judgments j JOIN people p ON p.id = j.expert_person_id LEFT JOIN knowledge_artifacts a ON a.judgment_id = j.id
                                    JOIN judgment_versions v ON v.judgment_id = j.id AND v.version = j.current_version WHERE j.workflow_id = $1 AND j.status <> 'rejected'`, [wf.id]);
         const approved = judgments.filter((j) => j.status === "approved" && j.artifact_status === "active");
-        const shown = (j) => (j.visible ? { judgmentId: j.id, title: j.title, expertName: j.expert_name } : { judgmentId: null, title: "Private knowledge (not shared with you)", expertName: j.expert_name });
+        const shown = (j) => (j.visible ? { judgmentId: j.id, title: j.title, expertName: j.expert_name } : { judgmentId: null, title: "Private knowledge (not shared with you)", expertName: j.expert_name, requestArtifactId: j.artifact_id && j.artifact_status === "active" && j.expert_person_id !== ctx.personId ? j.artifact_id : null });
         const findings = [];
         const add = (key, label, records, action) => { if (records.length) findings.push({ key, label, count: records.length, records: records.slice(0, 6), action }); };
 

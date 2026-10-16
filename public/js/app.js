@@ -1,6 +1,7 @@
 // Shell + router. One engine, two experiences: a workplace gets the work shell (sidebar, transfers, library, progress),
 // a family / community space gets the living shell (simple top navigation, skills, my knowledge, sharing).
 // All authorization is enforced by the server; navigation only reflects it.
+import { accessClick, invalidateAccess } from "./views/access.js";
 import { state, api, esc, onRender, render, route, go, has, setWorkflow, workflow, act, isLiving, isSample, store, toast } from "./core.js";
 import { icon } from "./icons.js";
 import { authView, authClick, policiesView, policiesClick, brand, loadAuthConfig } from "./views/auth.js";
@@ -22,7 +23,7 @@ import { storageView, invalidateStorage } from "./views/storage.js";
 import { invalidateAsk } from "./views/ask.js";
 import { t, tp, uiLang, LANGS } from "./i18n.js";
 import { announce } from "./a11y.js";
-import { startView, mapView, practiceView, nowClick, leaveNow, homeNow, invalidateNow } from "./views/now.js";
+import { startView, mapView, practiceView, nowClick, leaveNow, homeNow, invalidateNow, nowAfterRender, nowBusy } from "./views/now.js";
 const NOW = { start: startView, map: mapView, practice: practiceView };
 
 const root = document.getElementById("app");
@@ -127,17 +128,34 @@ function draw() {
   const view = e.views[r.name] ?? e.views.home;
   const routeKey = `${r.name}/${r.id ?? ""}`;
   if (routeKey !== lastRoute) {
-    if (lastRoute.startsWith("session/")) leaveSession();
-    if (/^(start|map|practice)\//.test(lastRoute)) leaveNow();
-    lastRoute = routeKey; window.scrollTo(0, 0);
+    // Record the new route first: leaving a page may trigger a render, which must not "leave" it a second time.
+    const prev = lastRoute; lastRoute = routeKey;
+    if (prev.startsWith("session/")) leaveSession();
+    if (/^(start|map|practice)\//.test(prev)) leaveNow();
+    window.scrollTo(0, 0);
   }
   // Capture, the Work Map and practice are full-screen: no navigation chrome between the person and the work.
-  if (NOW[r.name]) { root.innerHTML = NOW[r.name](r); return; }
+  if (NOW[r.name]) { root.innerHTML = NOW[r.name](r); nowAfterRender(); return; }
   const body = view[0](r);
   root.innerHTML = (isLiving() ? livingShell : workShell)(r.name === "home" ? `${homeNow()}${firstRunGuide()}${body}` : body, r);
   if (r.name === "session") afterRender();
 }
-onRender(draw);
+// Back (bottom-left on every page except Home and the landing page): returns to the previous step inside the app, or
+// Home if there is none. It is a real <button>, outside the page so re-renders never move focus away from it.
+let inAppSteps = 0;
+function backButton() {
+  let b = document.getElementById("back-fab");
+  if (!b) {
+    b = document.createElement("button"); b.id = "back-fab"; b.className = "back-fab"; b.type = "button";
+    b.innerHTML = `<span aria-hidden="true">←</span> Back`; b.setAttribute("aria-label", "Back to the previous page");
+    b.addEventListener("click", () => { if (inAppSteps > 0) { inAppSteps -= 2; history.back(); } else go("#/"); });
+    document.body.appendChild(b);
+  }
+  const r = route();
+  b.hidden = r.name === "home" || (r.name === "start" && nowBusy()) || (r.name === "practice" && nowBusy());
+}
+const drawWithBack = () => { draw(); backButton(); };
+onRender(drawWithBack);
 
 document.addEventListener("submit", (e) => { if (e.target.matches("[data-noop-submit]")) e.preventDefault(); });
 document.addEventListener("click", async (e) => {
@@ -145,10 +163,22 @@ document.addEventListener("click", async (e) => {
   if (e.target.closest(".skip-link")) { e.preventDefault(); const m = document.getElementById("main"); m?.focus(); m?.scrollIntoView(); return; }
   if (e.target.closest('[data-act="logout"]')) return act("logout", async () => { await api("POST", "/api/auth/logout"); state.me = null; go("#/"); location.reload(); });
   if (!state.me) return authClick(e);
+  if (await accessClick(e)) return;
+  const del = e.target.closest('[data-act="delete-skill"]');
+  if (del) {
+    e.stopPropagation();
+    if (!confirm(`Delete "${del.dataset.name}"? It disappears from every list and any session still recording for it is terminated. Knowledge already approved stays with the person who contributed it.`)) return;
+    return act("delete-skill", async () => {
+      await api("POST", `/api/workflows/${del.dataset.id}/delete`, { confirm: true });
+      state.workflows = await api("GET", "/api/workflows").catch(() => state.workflows.filter((w) => w.id !== del.dataset.id));
+      if (state.workflowId === del.dataset.id) setWorkflow(state.workflows[0]?.id ?? null);
+      invalidateAll(); toast(`Deleted "${del.dataset.name}".`); announce("Skill deleted.");
+    });
+  }
   if (await spacesClick(e)) return;
   const r = route();
   if (r.name === "policies") return policiesClick(e);
-  if (NOW[r.name]) return nowClick(e);
+  if (await nowClick(e) || NOW[r.name]) return; // live screens, and session actions shown on Home (terminate)
   (exp().views[r.name] ?? exp().views.home)[1]?.(e);
 });
 document.addEventListener("change", async (e) => {
@@ -163,6 +193,7 @@ document.addEventListener("change", async (e) => {
 });
 function invalidateAll() { [invalidateSpaces, invalidateGroups, invalidateMissions, invalidateStorage, invalidateRadar, invalidateAsk, invalidateKnowledge, invalidateApprentice, invalidateInsights, invalidateWorkflow, invalidateTransfers, invalidateProgress, invalidateLiving, invalidateCommand].forEach((f) => f()); }
 window.addEventListener("hashchange", async () => {
+  inAppSteps++;
   const r = route();
   if (r.name === "home") invalidateNow();
   if (["home", "workflows", "capture"].includes(r.name) && state.me?.org) { invalidateCommand(); state.workflows = await api("GET", "/api/workflows").catch(() => state.workflows); }
@@ -171,10 +202,10 @@ window.addEventListener("hashchange", async () => {
   if (["missions", "home"].includes(r.name)) invalidateMissions();
   if (r.name === "groups") invalidateGroups();
   if (r.name === "storage") invalidateStorage();
-  if (["spaces", "inbox"].includes(r.name)) invalidateSpaces();
+  if (["spaces", "inbox"].includes(r.name)) { invalidateSpaces(); invalidateAccess(); }
   if (state.me) { const before = state.unread; loadInbox().then(() => { if (state.unread !== before) render(); }).catch(() => {}); }
   if (["transfers", "home", "journey", "sharing", "knowledge", "progress"].includes(r.name)) { invalidateTransfers(); invalidateLiving(); invalidateProgress(); }
-  draw();
+  drawWithBack();
   document.getElementById("main")?.focus({ preventScroll: true });
 });
 
@@ -187,7 +218,7 @@ async function boot() {
     if (isSample()) state.samplePeople = await api("GET", "/api/samples/people").catch(() => []);
     await loadInbox().catch(() => {});
   } else if (state.me?.org && isSample()) state.samplePeople = [];
-  draw();
+  drawWithBack();
 }
 /** Re-read the signed-in person and redraw without a page load (used by the accessibility test harness). */
 export async function reboot() { invalidateAll(); invalidateAdmin(); lastRoute = ""; await boot(); }

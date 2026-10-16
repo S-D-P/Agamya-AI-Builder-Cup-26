@@ -1,16 +1,19 @@
 // KT MISSIONS: list → guided creation (identity, template, brief, review) → overview with a derived lifecycle stage.
 // The mission orchestrates capture, the Missing Knowledge Detective, the Judgment Stress Test and assessments; nothing
 // here decides access (the server does) and nothing marks success that the records do not show.
+import { requestButton } from "./access.js";
 import { state, api, esc, render, act, draft, toast, go, ago } from "../core.js";
 import { icon } from "../icons.js";
 import { orb } from "../persona.js";
 import { t, langSelect, langAttr, scriptLang } from "../i18n.js";
 import { announce } from "../a11y.js";
 
+const loading = Symbol("loading");
 let list = null, current = null, review = null, templates = null, people = null, groups = null, wfDetail = null;
 let wiz = null; // { step, missionId, form }
 
-export function invalidateMissions() { list = null; current = null; review = null; wfDetail = null; }
+// People and groups change elsewhere (Groups, People): reload them whenever missions are entered again.
+export function invalidateMissions() { list = null; current = null; review = null; wfDetail = null; people = null; groups = null; }
 
 const STAGES = [["draft", "Draft"], ["awaiting_participants", "Awaiting participants"], ["ready_to_capture", "Ready to capture"], ["capturing", "Capturing"], ["knowledge_review", "Knowledge review"], ["transfer_assessment", "Transfer assessment"], ["completed", "Completed"]];
 const OTHER = { paused: "Paused", blocked: "Blocked", cancelled: "Cancelled", completed_with_exceptions: "Completed with recorded exceptions" };
@@ -43,16 +46,17 @@ function blankForm() {
     brief: Object.fromEntries([...LISTS.map(([k]) => [k, ""]), ...TEXTS.map(([k]) => [k, ""])]) };
 }
 function loadWizardData() {
-  if (!templates) api("GET", "/api/templates").then((x) => { templates = x; render(); });
-  if (!people) api("GET", "/api/people").then((x) => { people = x; render(); });
-  if (!groups) api("GET", "/api/groups").then((x) => { groups = x.groups; render(); }).catch(() => { groups = []; });
+  // Fetch once (a placeholder stops re-renders from refetching); on failure show an empty list instead of loading forever.
+  if (!templates) { templates = loading; api("GET", "/api/templates").then((x) => { templates = x; render(); }).catch((e) => { templates = { builtIn: [], organization: [], captureMethods: {}, canSave: false }; toast(e.message, true); render(); }); }
+  if (!people) { people = loading; api("GET", "/api/people").then((x) => { people = x; render(); }).catch(() => { people = []; render(); }); }
+  if (!groups) api("GET", "/api/groups").then((x) => { groups = x.groups; render(); }).catch(() => { groups = []; render(); });
 }
 function tplOf(f) { return f.templateId ? templates.organization.find((x) => x.id === f.templateId) : templates.builtIn.find((x) => x.key === f.templateKey); }
 
 function wizardView() {
   if (!wiz) wiz = { step: 1, missionId: null, form: blankForm(), suggested: null, flags: [] };
   loadWizardData();
-  if (!templates || !people || !groups) return `<span class="thinking">Loading</span>`;
+  if (!templates || !people || !groups || templates === loading || people === loading) return `<span class="thinking">Loading</span>`;
   const steps = ["Mission identity", "Template", "Mission brief", "Review and invite"];
   return `<div class="page-head"><div><div class="eyebrow">New KT mission</div><h1>${esc(steps[wiz.step - 1])}</h1></div><a class="btn ghost" href="#/missions">Cancel</a></div>
     <ol class="wizard-steps" aria-label="Steps">${steps.map((s, i) => `<li ${i + 1 === wiz.step ? 'aria-current="step"' : ""} class="${i + 1 < wiz.step ? "done" : i + 1 === wiz.step ? "now" : ""}"><span aria-hidden="true">${i + 1}</span> ${esc(s)}${i + 1 < wiz.step ? '<span class="sr-only"> (done)</span>' : ""}</li>`).join("")}</ol>
@@ -176,7 +180,7 @@ function overviewView(id) {
   ${m.requirements.length ? requirementsSection(m) : ""}
   <section class="card pad stack" style="margin-top:16px" aria-labelledby="kn-h"><h2 id="kn-h" class="h3">Captured knowledge</h2>
     ${m.knowledge.length ? `<div class="table-wrap" role="region" aria-label="Knowledge table" tabindex="0"><table class="t"><caption class="sr-only">Knowledge captured in this mission</caption><thead><tr><th scope="col">Knowledge</th><th scope="col">Status</th><th scope="col">Open gaps</th><th scope="col">Practice cases</th></tr></thead><tbody>
-      ${m.knowledge.map((k) => `<tr><td>${k.id ? `<a href="#/knowledge/${k.id}"${langAttr(scriptLang(k.title))}>${esc(k.title)}</a>` : esc(k.title)} <span class="small muted">v${k.version} · ${esc(k.expert)}</span></td><td>${esc(k.status === "approved" ? "Approved by the expert" : k.status === "observed" ? "Awaiting the expert's review" : k.status)}</td><td>${k.openGaps}</td><td>${k.tests.approved} approved${k.tests.draft ? `, ${k.tests.draft} awaiting review` : ""}</td></tr>`).join("")}</tbody></table></div>`
+      ${m.knowledge.map((k) => `<tr><td>${k.id ? `<a href="#/knowledge/${k.id}"${langAttr(scriptLang(k.title))}>${esc(k.title)}</a>` : `${esc(k.title)} ${requestButton(k.requestArtifactId)}`} <span class="small muted">v${k.version} · ${esc(k.expert)}</span></td><td>${esc(k.status === "approved" ? "Approved by the expert" : k.status === "observed" ? "Awaiting the expert's review" : k.status)}</td><td>${k.openGaps}</td><td>${k.tests.approved} approved${k.tests.draft ? `, ${k.tests.draft} awaiting review` : ""}</td></tr>`).join("")}</tbody></table></div>`
       : `<p class="small muted">Nothing captured yet. A recording alone never completes a mission: knowledge must be reviewed and approved by the expert.</p>`}
     ${m.sessions.length ? `<p class="small">Capture sessions: ${m.sessions.map((s) => `<a href="#/session/${s.id}">${esc(s.expert)} · ${esc(s.status)} · ${ago(s.createdAt)}</a>`).join(" · ")}</p>` : ""}</section>
   ${resultsSection(m)}

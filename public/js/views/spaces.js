@@ -1,5 +1,6 @@
 // SPACES and INBOX: the person's Personal and Enterprise spaces, pending invitations, notifications, creating a space,
 // and the dismissible first-run guide. Membership in one space never grants anything in another; the server decides.
+import { accessInboxSection } from "./access.js";
 import { state, api, esc, render, act, draft, ago, toast, store } from "../core.js";
 import { icon } from "../icons.js";
 import { orb } from "../persona.js";
@@ -49,6 +50,7 @@ export function inboxView() {
   return `<div class="page-head"><div><h1>${t("Invitations and notifications")}</h1><p>Only what concerns you. Notifications name the mission or space, never its private content.</p></div>
     ${inbox.notifications.some((n) => !n.read) ? `<button class="sm" data-act="read-all">Mark all as read</button>` : ""}</div>
   ${inbox.invitations.length ? `<section class="card pad stack" aria-labelledby="ib-inv"><h2 id="ib-inv">${t("Invitations")}</h2>${inbox.invitations.map(invitationRow).join("")}</section>` : ""}
+  ${accessInboxSection()}
   <section class="card pad stack" style="margin-top:16px" aria-labelledby="ib-n"><h2 id="ib-n">${t("Notifications")}</h2>
     ${inbox.notifications.length ? `<ul class="plain notif-list">${inbox.notifications.map((n) => `<li class="notif ${n.read ? "" : "unread"}">
       <span class="tag ${n.read ? "" : "sky"}">${n.read ? "read" : "new"}</span>

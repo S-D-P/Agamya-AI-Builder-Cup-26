@@ -8,7 +8,7 @@ import { VisualCapture, VoiceCapture, AnswerRecorder, speak } from "../capture.j
 import { langSelect, langAttr, langName, uiLang, t as tr } from "../i18n.js";
 import { announce } from "../a11y.js";
 
-let S = null, J = null, wfDetail = null;
+let S = null, J = null, wfDetail = null, wfLoading = null;
 let visual = null, voice = null, answerRec = null, videoEl = null, editing = false, lastSpoken = null;
 const setup = { source: null, caseRef: null };
 const BUSY = new Set(["processing", "analyzing", "extracting"]);
@@ -17,7 +17,10 @@ const BUSY = new Set(["processing", "analyzing", "extracting"]);
 export function captureView() {
   const w = workflow();
   if (!w) return `<div class="card pad">No workflow selected.</div>`;
-  if (!wfDetail || wfDetail.id !== w.id) { api("GET", `/api/workflows/${w.id}`).then((d) => { wfDetail = d; render(); }); return `<span class="thinking">Loading</span>`; }
+  if (!wfDetail || wfDetail.id !== w.id) {
+    if (wfLoading !== w.id) { wfLoading = w.id; api("GET", `/api/workflows/${w.id}`).then((d) => { wfDetail = d; }).catch((e) => { toast(e.message, true); wfDetail = { id: w.id, procedures: [], documents: [], people: [] }; }).finally(() => { wfLoading = null; render(); }); }
+    return `<span class="thinking">Loading</span>`;
+  }
   const srcs = wfDetail.capture_sources.concat(wfDetail.capture_sources.includes("manual") ? [] : ["manual"]);
   setup.source = srcs.includes(setup.source) ? setup.source : srcs[0];
   const sim = wfDetail.simSources.find((x) => x.id === setup.source);

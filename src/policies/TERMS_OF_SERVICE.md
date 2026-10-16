@@ -1,9 +1,8 @@
-> **Template, not legal advice.** Placeholder text that shows where an organization's own, lawyer-reviewed terms go. The platform stores versions and records who accepted which version and when.
+# Terms of Service
 
-# Terms of Service (template)
-
-1. **Service.** The platform observes work that participants choose to capture, asks questions about it, and turns approved explanations into organizational knowledge used for training.
-2. **Accounts.** You are responsible for activity under your account. Do not share credentials.
-3. **Your organization's data.** Content captured or uploaded in an organization belongs to that organization. The platform processes it only to provide the service.
-4. **AI output.** Suggestions, extracted judgments and generated training cases are produced by AI and are not authoritative until an authorized expert validates them.
-5. **Availability.** Provided as-is during evaluation. No service levels apply to this template.
+1. **What Agamya does.** Agamya observes work that you choose to show it (your screen or camera, and your voice), asks short questions about it, and turns explanations that the expert confirms into knowledge that others can learn from.
+2. **Your account.** You are responsible for what happens under your account. Do not share your password.
+3. **Your content.** What you capture or upload in a space belongs to that space and its owner. Agamya processes it only to provide the service: to understand it, ask about it, build Work Maps and teach from it.
+4. **AI output.** Questions, Work Maps, drafted knowledge, practice cases and tutoring come from AI. They are not authoritative until the expert confirms them, and every claim shows whether the expert said it or the AI inferred it.
+5. **Fair use.** Use Agamya as described in the Acceptable Use Policy.
+6. **Availability.** Agamya is provided as it is, without service-level guarantees.

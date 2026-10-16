@@ -704,8 +704,40 @@ export function createCapture({ db, storage, jobs, knowledge, policy, cfg, log }
     });
   }
 
+  /**
+   * Terminate a session started by accident or no longer needed (the expert, or a workflow manager). Its captured
+   * evidence is removed from use (soft-deleted, purged by retention), an unconfirmed Work Map is withdrawn, and the
+   * database keeps the session terminated even if a background job finishes afterwards (migration 006).
+   */
+  async function terminate(ctx, sessionId) {
+    requirePermission(ctx, "workflow.read");
+    return T(ctx, async (q) => {
+      const s = await loadSession(q, sessionId);
+      if (s.expert_person_id !== ctx.personId && !can(ctx, "workflow.manage")) throw httpError(403, "only the expert of this session can terminate it");
+      if (["done", "mapped", "terminated"].includes(s.status)) throw httpError(409, s.status === "terminated" ? "this session was already terminated" : "this session is complete; withdraw its knowledge instead");
+      await q("UPDATE expert_sessions SET status = 'terminated', ended_at = COALESCE(ended_at, now()), updated_at = now() WHERE id = $1", [s.id]);
+      await q("UPDATE observations SET deleted_at = now() WHERE session_id = $1 AND deleted_at IS NULL", [s.id]);
+      await q("UPDATE media_assets SET deleted_at = now() WHERE session_id = $1 AND deleted_at IS NULL", [s.id]);
+      await q("UPDATE work_maps SET status = 'withdrawn', updated_at = now() WHERE session_id = $1 AND status <> 'confirmed'", [s.id]);
+      await audit(q, { orgId: ctx.orgId, userId: ctx.userId, action: "session.terminate", targetType: "session", targetId: s.id, requestId: ctx.requestId, metadata: { from: s.status } });
+      return { status: "terminated" };
+    });
+  }
+
+  /** My recent sessions with a clear status, visible immediately after recording (both live and classic capture). */
+  async function mySessions(ctx) {
+    requirePermission(ctx, "workflow.read");
+    return T(ctx, async (q) => {
+      const rows = await q(`SELECT s.id, s.status, s.mode, s.capture_source, s.started_at, s.ended_at, w.name AS workflow, m.status AS map_status, m.title AS map_title
+                            FROM expert_sessions s JOIN workflows w ON w.id = s.workflow_id LEFT JOIN work_maps m ON m.session_id = s.id
+                            WHERE s.expert_person_id = $1 AND s.status <> 'terminated' AND w.deleted_at IS NULL ORDER BY s.started_at DESC LIMIT 20`, [ctx.personId ?? null]);
+      return rows.map((r) => ({ id: r.id, status: r.status, mode: r.mode, source: r.capture_source, startedAt: r.started_at, endedAt: r.ended_at, workflow: r.workflow,
+        title: r.map_title || r.workflow, mapStatus: r.map_status, href: r.mode === "live" || r.map_status ? `#/map/${r.id}` : `#/session/${r.id}` }));
+    });
+  }
+
   return {
-    startSession, grantConsent, setPrivacy, uploadMedia, simAction, addNote, endTask, answer, stopQuestions, deleteObservation, getSession, evidenceWindow,
+    startSession, grantConsent, setPrivacy, uploadMedia, simAction, addNote, endTask, answer, stopQuestions, deleteObservation, getSession, evidenceWindow, terminate, mySessions,
     // Reused by live sessions (src/domain/workmaps.mjs): same storage, consent checks and evidence records.
     internals: { loadSession, loadWorkflow, insertObservation, activeConsent, assertCaptureAllowed, assertIsExpert },
     handlers: { process_frame: processFrame, process_audio: processAudio, analyze_session: analyzeSession, process_answer: processAnswer },

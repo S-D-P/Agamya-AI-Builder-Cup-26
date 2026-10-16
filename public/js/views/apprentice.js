@@ -1,6 +1,7 @@
 // LESSONS: a situation you have not seen, your reasoning, progressive hints, then a nearby case where the expert's
 // rule should NOT apply. Answers are never shown up front. Correctness is decided against the approved answer key,
 // not by the model; the model only coaches.
+import { askToShareBlock } from "./access.js";
 import { state, api, esc, render, act, go, draft, workflow, has, poll, toast, isLiving, setWorkflow } from "../core.js";
 import { icon } from "../icons.js";
 import { orb } from "../persona.js";
@@ -39,7 +40,7 @@ export function apprenticeView(r) {
         ${l.scenarios.map((s, i) => `<button class="card lesson-step" data-act="open" data-id="${s.id}" aria-current="${attempt?.scenario?.id === s.id}">
           <span class="small"><b>${i + 1}. ${esc(KIND[s.kind]?.[0] ?? "Case")}</b></span><span class="small muted" style="grid-column:1/3">${esc(s.title)}</span>
           <span style="grid-row:1/3;grid-column:3">${s.attempt?.result ? (s.attempt.result.finalCorrect ? icon("validate", 18, "reached the expected decision") : `<span role="img" aria-label="did not reach the expected decision">✗</span>`) : s.attempt ? icon("clock", 16, "in progress") : ""}</span></button>`).join("")}
-      </div>`).join("") || `<p class="small muted" style="margin-top:8px">${living ? "Nothing has been shared with you yet. Knowledge stays private until its teacher shares it." : "No approved knowledge to learn yet."}</p>`}
+      </div>`).join("") || (living ? `<div style="margin-top:8px"><p class="small muted">Nothing has been shared with you yet.</p>${askToShareBlock()}</div>` : `<p class="small muted" style="margin-top:8px">No approved knowledge to learn yet.</p>`)}
     </aside>
     ${askPanel()}</div>
     <section class="card pad">${attempt ? attemptView(attempt) : `<div class="empty">${orb("teaching", 96)}<p>Pick a lesson to begin.</p></div>`}</section>

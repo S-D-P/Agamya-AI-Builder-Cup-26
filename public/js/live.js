@@ -2,7 +2,8 @@
 // over a same-origin WebSocket → Gemini Live; Moti's voice (24 kHz PCM) is played back and stops instantly when interrupted.
 // Nothing here holds credentials. Every callback reports state so the UI can announce it.
 
-const b64 = (buf) => { const u = new Uint8Array(buf); let s = ""; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(s); };
+// Small chunks: spreading tens of thousands of arguments can overflow the call stack in some browsers.
+const b64 = (buf) => { const u = new Uint8Array(buf); let s = ""; for (let i = 0; i < u.length; i += 0x1000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x1000)); return btoa(s); };
 const unb64 = (s) => { const bin = atob(s), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u.buffer; };
 
 export class LiveMoti {
@@ -10,18 +11,22 @@ export class LiveMoti {
   constructor(o) { Object.assign(this, o); this.state = "idle"; this.sent = { frames: 0, skipped: 0 }; }
 
   async start(videoEl) {
+    try { await this.open(videoEl); } catch (e) { this.stopMedia(); try { this.ws?.close(); } catch { /* not open */ } throw e; }
+  }
+
+  async open(videoEl) {
     this.setState("starting");
     // 1. Media first, so a refused permission never leaves a half-open session.
     this.mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
     if (this.video === "screen") this.vstream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 5 }, audio: false });
     else if (this.video === "camera") this.vstream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720, facingMode: "environment" }, audio: false });
-    if (this.vstream && videoEl) { videoEl.srcObject = this.vstream; videoEl.muted = true; videoEl.playsInline = true; await videoEl.play().catch(() => {}); this.videoEl = videoEl; }
+    if (this.vstream) this.attachVideo(videoEl ?? document.getElementById("now-video"));
     this.vstream?.getVideoTracks()[0]?.addEventListener("ended", () => this.onError?.("Screen sharing stopped. Share again or end the session."));
     // 2. Socket.
     const url = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/live?mode=${this.mode}&${this.sessionId ? `session=${this.sessionId}&` : ""}language=${this.language ?? "en"}`;
     this.ws = new WebSocket(url);
     this.ws.onmessage = (e) => this.onMessage(JSON.parse(e.data));
-    this.ws.onclose = () => { this.stopMedia(); if (this.state !== "ended") this.setState("closed"); };
+    this.ws.onclose = () => { this.stopMedia(); if (this.state !== "ended" && this.state !== "closed") this.setState("closed"); };
     this.ws.onerror = () => this.onError?.("Connection to Moti failed.");
     await new Promise((res, rej) => { this.ws.onopen = res; setTimeout(() => rej(new Error("Moti did not answer. Try again.")), 15000); });
     // 3. Microphone → 16 kHz PCM chunks.
@@ -34,7 +39,7 @@ export class LiveMoti {
     // 4. Playback context for Moti's voice.
     this.outCtx = new AudioContext({ sampleRate: 24000 }); this.playAt = 0; this.sources = new Set();
     // 5. Frames.
-    if (this.videoEl) { this.canvas = document.createElement("canvas"); this.thumb = document.createElement("canvas"); this.thumb.width = 32; this.thumb.height = 18; this.timer = setInterval(() => this.tickFrame(), 1000); }
+    if (this.vstream) { this.canvas = document.createElement("canvas"); this.thumb = document.createElement("canvas"); this.thumb.width = 32; this.thumb.height = 18; this.timer = setInterval(() => this.tickFrame(), 1000); }
   }
 
   onMessage(m) {
@@ -84,8 +89,23 @@ export class LiveMoti {
   say(text) { if (this.ws?.readyState === 1) this.ws.send(JSON.stringify({ t: "text", text })); }
   setOffRecord(on) { this.offRecord = on; this.muted = on; if (this.ws?.readyState === 1) this.ws.send(JSON.stringify({ t: "offrecord", on })); }
   finish() { if (this.ws?.readyState === 1) this.ws.send(JSON.stringify({ t: "done" })); this.setState("ending"); }
-  stopMedia() { clearInterval(this.timer); this.mic?.getTracks().forEach((t) => t.stop()); this.vstream?.getTracks().forEach((t) => t.stop()); try { this.inCtx?.close(); this.outCtx?.close(); } catch { /* closed */ } }
-  close() { this.setState("ended"); try { this.ws?.close(); } catch { /* closed */ } this.stopMedia(); }
+  // Idempotent: called on "I'm done", on socket close and on leaving the page. AudioContext.close() rejects (it does not
+  // throw) when the context is already closed, so each context is closed once and any rejection is absorbed.
+  stopMedia() {
+    if (this.stopped) return;
+    this.stopped = true;
+    clearInterval(this.timer); clearTimeout(this.speakT);
+    try { this.node?.port && (this.node.port.onmessage = null); this.node?.disconnect(); } catch { /* already disconnected */ }
+    this.mic?.getTracks().forEach((t) => t.stop()); this.vstream?.getTracks().forEach((t) => t.stop());
+    for (const ctx of [this.inCtx, this.outCtx]) if (ctx && ctx.state !== "closed") ctx.close().catch(() => {});
+  }
+  close() { if (this.state !== "ended") this.setState("ended"); try { this.ws?.close(); } catch { /* closed */ } this.stopMedia(); }
+  /** The page re-renders; give the live stream to the new <video> element so the person keeps seeing themselves. */
+  attachVideo(el) {
+    if (!el || !this.vstream) return;
+    if (el.srcObject !== this.vstream) { el.srcObject = this.vstream; el.muted = true; el.playsInline = true; el.play().catch(() => {}); }
+    this.videoEl = el;
+  }
   setState(s) { this.state = s; this.onState?.(s); }
 }
 

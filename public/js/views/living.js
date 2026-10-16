@@ -1,6 +1,7 @@
 // AGAMYA FOR LIVING KNOWLEDGE: home, the featured journey, skills, sharing & permissions.
 // Same engine as Agamya for Work; different defaults (private), words (teacher / learner / skill) and pace.
 // The journey page shows the state of real objects (session, judgment, artifact, attempts); nothing is pre-filled.
+import { askToShareBlock } from "./access.js";
 import { state, api, esc, render, act, go, draft, has, ago, toast, setWorkflow } from "../core.js";
 import { icon } from "../icons.js";
 import { orb } from "../persona.js";
@@ -12,7 +13,8 @@ const editing = {};
 export function invalidateLiving() { journey = null; mine = null; detailCache = {}; }
 const loadJourney = () => api("GET", "/api/journey").then((j) => { journey = j; render(); }).catch(() => { journey = { none: true }; render(); });
 const loadMine = () => api("GET", "/api/knowledge/mine").then((m) => { mine = m; render(); }).catch((e) => { mine = { mine: [], sharedWithMe: [] }; toast(e.message, true); });
-const loadPeople = () => api("GET", "/api/people").then((p) => { people = p; render(); });
+let peopleLoading = false;
+const loadPeople = () => { if (peopleLoading) return; peopleLoading = true; api("GET", "/api/people").then((p) => { people = p; }).catch(() => { people = []; }).finally(() => { peopleLoading = false; render(); }); };
 
 const VIS = { private: ["Only the contributor", "eyeoff"], named: ["Named people", "users"], organization: ["Everyone in this space", "share"] };
 export const visTag = (v, n = 0) => v ? `<span class="tag ${v === "private" ? "" : v === "named" ? "sky" : "green"}">${icon(VIS[v][1], 12)} ${VIS[v][0]}${v === "named" && n ? ` (${n})` : ""}</span>` : "";
@@ -38,7 +40,7 @@ export function livingHomeView() {
 }
 
 function knowledgeList(rows, mineList) {
-  if (!rows.length) return `<p class="small muted">${mineList ? "Nothing yet. Capture a skill to begin." : "Nothing has been shared with you yet."}</p>`;
+  if (!rows.length) return mineList ? `<p class="small muted">Nothing yet. Capture a skill to begin.</p>` : `<p class="small muted">Nothing has been shared with you yet.</p>${askToShareBlock()}`;
   return `<div class="klist">${rows.map((k) => `<a class="card kitem" href="#/knowledge/${k.id}"><b>${esc(k.title)}</b><span class="small muted">${esc(k.workflowName)} · ${esc(k.expertName)} · ${ago(k.createdAt)}</span>
     <span class="row">${k.status === "observed" ? '<span class="tag amber">waiting for your review</span>' : k.withdrawn ? '<span class="tag">withdrawn</span>' : visTag(k.visibility, k.sharedCount)}${k.restricted ? '<span class="tag amber">restricted</span>' : ""}</span></a>`).join("")}</div>`;
 }
@@ -121,7 +123,7 @@ export function skillsView() {
   const teacher = has("EXPERT");
   return `<div class="page-head"><div><h1>Capture a skill</h1><p>Show it the way you normally would. Agamya stays quiet while you work and asks only about choices that matter.</p></div></div>
     <div class="skill-grid">${state.workflows.map((w) => `<article class="card pad stack skill">
-      <div class="row between"><h2>${esc(w.name)}</h2>${w.source === "demo" ? '<span class="tag sky">sample</span>' : ""}</div>
+      <div class="row between"><h2>${esc(w.name)}</h2><span class="row">${w.source === "demo" ? '<span class="tag sky">sample</span>' : ""}${has("ORG_ADMIN", "WORKFLOW_OWNER", "KT_COORDINATOR") ? `<button class="ghost sm danger" data-act="delete-skill" data-id="${w.id}" data-name="${esc(w.name)}">Delete</button>` : ""}</span></div>
       <p class="small muted">${esc(w.description)}</p>
       <div class="row small">${["camera", "microphone", "documents"].filter((k) => w.modalities?.[k]).map((k) => `<span class="mod">${icon(k === "microphone" ? "mic" : k === "documents" ? "doc" : "camera", 12)} ${k === "documents" ? "written recipe" : k}</span>`).join("")}</div>
       ${teacher ? (startFor?.id === w.id ? startForm(startFor) : `<div><button class="primary" data-act="pick-skill" data-id="${w.id}">${icon("capture", 15)} Start a session</button></div>`) : ""}

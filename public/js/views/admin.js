@@ -1,6 +1,7 @@
 // ADMIN: members and roles, invitations, policies, retention and AI budget, audit trail.
 import { state, api, esc, render, act, draft, has, ago, usd, toast, isLiving } from "../core.js";
 import { icon } from "../icons.js";
+import { announce } from "../a11y.js";
 
 let data = null, tab = "members", lastInvite = null;
 const ROLE_LABEL = {
@@ -49,8 +50,9 @@ function members() {
     <section class="card pad stack" aria-labelledby="inv-h"><h2 id="inv-h">Invite someone</h2><label class="field" for="inv-email">Email<input id="inv-email" data-draft="inv-email" type="email" autocomplete="off"></label>
       <fieldset class="roles-fieldset"><legend class="small"><b>Roles in this space</b></legend><div class="stack">${ROLES().filter((r) => manager() || ["EXPERT", "LEARNER"].includes(r)).map((r) => `<label class="check"><input type="checkbox" data-inv-role="${r}" ${r === "LEARNER" ? "checked" : ""} ${OWNER_ONLY.includes(r) && !owner ? "disabled" : ""}> ${esc(label(r))} <span class="small muted">${esc(ROLE_HELP[r] ?? "")}</span></label>`).join("")}</div></fieldset>
       <div><button class="primary" data-act="invite" ${state.busy ? "disabled" : ""}>Create invitation</button></div>
-      ${lastInvite ? `<div class="callout green small" role="status"><b>Invitation created.</b> If this person already has an Agamya account, it appears in their Invitations page. Otherwise share this single-use link (valid ${lastInvite.expiresInDays} days):<br><code style="word-break:break-all">${esc(lastInvite.inviteUrl)}</code></div>` : ""}
-      <p class="honest">No email is sent by this build. Enterprise sign-in (OIDC) is supported where configured; groups here are Agamya groups and are not synchronised with any corporate directory.</p>
+      ${lastInvite ? inviteSent(lastInvite) : ""}
+      <p class="small muted"><b>How invitations work:</b> 1. Create the invitation. 2. Send the link from your own email (Gmail opens with the message written for you) or copy it. 3. The person opens it, then either creates their account (name and their own password) or, if they already use Agamya, enters their existing password. People who already have an account also see it in their Invitations page.</p>
+      <p class="honest">Agamya does not send email itself. Enterprise sign-in (OIDC) is supported where configured; groups here are Agamya groups and are not synchronised with any corporate directory.</p>
       ${data.invitations.length ? `<h3>Invitations</h3><div class="table-wrap" role="region" aria-label="Invitations" tabindex="0"><table class="t"><caption class="sr-only">Invitations to this space</caption><thead><tr><th scope="col">Email</th><th scope="col">Roles</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead><tbody>
         ${data.invitations.slice(0, 30).map((x) => `<tr><td>${esc(x.email)}</td><td class="small">${esc(x.roles.map(label).join(", "))}</td><td><span class="tag ${x.status === "accepted" ? "green" : x.status === "pending" ? "amber" : ""}">${esc(x.status)}</span></td>
           <td>${x.status === "pending" ? `<button class="sm ghost" data-act="revoke-inv" data-id="${x.id}" aria-label="Revoke the invitation for ${esc(x.email)}">Revoke</button>` : ""}</td></tr>`).join("")}</tbody></table></div>
@@ -59,7 +61,7 @@ function members() {
 
 function policies() {
   return `<section class="card pad stack" style="max-width:900px"><h2>Policies</h2>
-    ${data.policies.policies.map((p) => `<div class="row between"><span><b>${esc(p.title)}</b> <span class="small muted">v${esc(p.version)}</span> ${p.isTemplate ? '<span class="tag amber">template, not legal advice</span>' : '<span class="tag green">organization version</span>'}</span><span class="small mono">sha256 ${esc(p.contentSha256.slice(0, 12))}…</span></div>`).join("")}
+    ${data.policies.policies.map((p) => `<div class="row between"><span><b>${esc(p.title)}</b> <span class="small muted">v${esc(p.version)}</span> ${p.isTemplate ? '<span class="tag">Agamya policy</span>' : '<span class="tag green">your organization version</span>'}</span><span class="small mono">sha256 ${esc(p.contentSha256.slice(0, 12))}…</span></div>`).join("")}
     ${manager() ? `<div class="divider"></div><h3>Publish your organization's version</h3><p class="small muted">Users must accept the new version before continuing. Acceptance is recorded with version and content hash.</p>
       <div class="grid cols-2"><label class="field">Policy<select id="pol-type">${data.policies.policies.map((p) => `<option value="${p.type}">${esc(p.title.replace(" (template)", ""))}</option>`).join("")}</select></label><label class="field">Version<input data-draft="pol-version" placeholder="2026.11"></label></div>
       <label class="field">Text (Markdown)<textarea data-draft="pol-text" rows="6"></textarea></label><div><button class="sm primary" data-act="publish">Publish version</button></div>` : ""}</section>`;
@@ -92,10 +94,12 @@ export async function adminClick(e) {
     if (!roles.length) return toast("A member needs at least one role.", true);
     return act("role", async () => { await api("POST", `/api/admin/members/${m.user_id}/roles`, { roles }); data = null; });
   }
+  if (a === "copy-invite") { navigator.clipboard?.writeText(lastInvite.inviteUrl).then(() => { toast("Link copied."); announce("Invitation link copied."); }, () => toast("Copy the link from the box.", true)); return; }
   if (a === "revoke-inv") return act("revoke", async () => { await api("POST", `/api/admin/invitations/${t.dataset.id}/revoke`); toast("Invitation revoked."); data = null; });
   if (a === "invite") {
     const roles = [...document.querySelectorAll("[data-inv-role]")].filter((x) => x.checked).map((x) => x.dataset.invRole);
-    return act("invite", async () => { lastInvite = await api("POST", "/api/admin/invitations", { email: draft("inv-email"), roles }); state.drafts["inv-email"] = ""; });
+    const email = draft("inv-email");
+    return act("invite", async () => { lastInvite = { ...(await api("POST", "/api/admin/invitations", { email, roles })), email }; state.drafts["inv-email"] = ""; });
   }
   if (a === "publish") return act("publish", async () => { await api("POST", "/api/admin/policies", { type: document.getElementById("pol-type").value, version: draft("pol-version"), content: draft("pol-text") }); toast("Published. Members will be asked to accept it."); data = null; });
   if (a === "save-settings") {
@@ -104,3 +108,23 @@ export async function adminClick(e) {
   }
 }
 export function invalidateAdmin() { data = null; }
+
+/** After creating an invitation: send it from the inviter's own Gmail (compose window, nothing sent automatically), any mail app, or copy. */
+function inviteSent(inv) {
+  const space = state.me?.org?.name ?? "our space", from = state.me?.user?.displayName ?? "";
+  const subject = `Join ${space} on Agamya`;
+  const body = `Hi,
+
+${from ? `${from} invited you` : "You are invited"} to join "${space}" on Agamya, where we capture and pass on how our work is really done.
+
+Open this link to join (valid ${inv.expiresInDays} days, single use):
+${inv.inviteUrl}
+
+If you are new, choose your name and a password. If you already use Agamya, enter your existing password.
+`;
+  const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(inv.email ?? "")}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const mailto = `mailto:${encodeURIComponent(inv.email ?? "")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  return `<div class="callout green small stack" role="status"><b>Invitation created for ${esc(inv.email ?? "")}.</b>
+    <div class="row wrap"><a class="btn primary sm" href="${esc(gmail)}" target="_blank" rel="noopener">Send with Gmail</a><a class="btn sm" href="${esc(mailto)}">Other email app</a><button class="sm" data-act="copy-invite">Copy link</button></div>
+    <code style="word-break:break-all">${esc(inv.inviteUrl)}</code></div>`;
+}

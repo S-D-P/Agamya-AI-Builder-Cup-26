@@ -35,6 +35,7 @@ import { createMissions } from "./domain/missions.mjs";
 import { createNotifications } from "./domain/notifications.mjs";
 import { createStorageReport } from "./domain/storage-report.mjs";
 import { createWorkMaps } from "./domain/workmaps.mjs";
+import { createAccess } from "./domain/access.mjs";
 import { createLive } from "./domain/live.mjs";
 
 export async function buildServices(cfg, { log = createLogger(cfg), modelAdapter } = {}) {
@@ -61,13 +62,14 @@ export async function buildServices(cfg, { log = createLogger(cfg), modelAdapter
   const notifications = createNotifications({ db });
   const storageReport = createStorageReport({ db });
   const workmaps = createWorkMaps({ db, capture });
+  const access = createAccess({ db });
   const live = createLive({ db, capture, workmaps, log, cfg });
   Object.assign(handlers, capture.handlers, knowledge.handlers, apprentice.handlers, workflows.handlers, gaps.handlers, missions.handlers, workmaps.handlers);
   await policy.seedTemplates();
   if (cfg.demo.seed) await seedDemo({ db, identity, cfg, log });
   await ensureJudgeAccounts({ db, identity, cfg, log });
   await seedBenchmark(db); // measured evidence shown on Insights; platform-level, read-only
-  return { cfg, log, db, storage, jobs, identity, policy, workflows, knowledge, capture, apprentice, analytics, transfers, gaps, ask: askService, groups, missions, notifications, storageReport, workmaps, live };
+  return { cfg, log, db, storage, jobs, identity, policy, workflows, knowledge, capture, apprentice, analytics, transfers, gaps, ask: askService, groups, missions, notifications, storageReport, workmaps, live, access };
 }
 
 /** Hourly lifecycle sweep per organization (enqueued idempotently, executed by whichever worker claims it). */
@@ -124,7 +126,7 @@ export async function buildServer(s) {
   await app.register(rateLimit, { global: true, max: 600, timeWindow: "1 minute", keyGenerator: (req) => req.ctx?.userId ?? req.ip });
 
   // ---------------------------------------------------------------- authentication, CSRF, policy gate, request context
-  const PUBLIC = new Set(["/api/auth/config", "/api/auth/login", "/api/auth/demo-login", "/api/samples", "/api/auth/signup", "/api/auth/accept-invite", "/api/auth/oidc/start", "/api/auth/oidc/callback"]);
+  const PUBLIC = new Set(["/api/auth/config", "/api/auth/login", "/api/auth/demo-login", "/api/samples", "/api/auth/signup", "/api/auth/accept-invite", "/api/auth/invite-info", "/api/auth/oidc/start", "/api/auth/oidc/callback"]);
   // Spaces, the inbox and invitations work before a space's policies are accepted: they are how a person moves between spaces.
   const POLICY_EXEMPT = (url) => url.startsWith("/api/auth/") || url.startsWith("/api/policies") || url.startsWith("/api/spaces") || url.startsWith("/api/inbox") || url.startsWith("/api/invitations/");
   const policyCache = new Map();
@@ -217,6 +219,7 @@ export async function buildServer(s) {
       return { ok: true, csrfToken: r.csrfToken };
     });
   }
+  app.post("/api/auth/invite-info", { ...S({ required: ["token"], properties: { token: { type: "string", maxLength: 100 } } }), config: { rateLimit: { max: 20, timeWindow: "15 minutes" } } }, async (req) => s.identity.inviteInfo(req.body.token));
   app.post("/api/auth/accept-invite", { ...S({ required: ["token"], properties: { token: { type: "string", maxLength: 100 }, displayName: { type: "string", maxLength: 80 }, password: { type: "string", maxLength: 256 } } }), config: { rateLimit: { max: 10, timeWindow: "15 minutes" } } }, async (req, reply) => {
     const r = await s.identity.acceptInvite({ ...req.body, ...meta(req) });
     setSessionCookie(reply, r.token, r.expiresAt);
@@ -444,6 +447,7 @@ export async function buildServer(s) {
     const { kind = "screen", name, language, workflowId } = req.body;
     const wf = workflowId ? { workflowId, source: kind === "camera" ? "live:camera" : "live:screen" } : await s.workflows.quickStart(req.ctx, { name, kind }, req.id);
     const session = await s.capture.startSession(req.ctx, { workflowId: wf.workflowId, source: wf.source, language });
+    await s.workmaps.markLive(req.ctx, session.id);
     return { sessionId: session.id, workflowId: wf.workflowId, source: wf.source };
   });
   // WebSocket relay to Gemini Live. Authenticated by the session cookie (onRequest hook); same-origin only (no cross-site use).
@@ -464,6 +468,12 @@ export async function buildServer(s) {
     async (req) => s.workmaps.liveTurn(req.ctx, req.params.id, { role: "expert", text: req.body.text }));
   app.post("/api/live/:id/finish", S({ required: ["phase"], properties: { phase: { type: "string", enum: ["capture", "debrief"] } } }), async (req) => s.workmaps.finishPhase(req.ctx, req.params.id, req.body.phase));
   app.get("/api/maps", async (req) => s.workmaps.list(req.ctx));
+  app.get("/api/my/sessions", async (req) => s.capture.mySessions(req.ctx));
+  app.post("/api/sessions/:id/terminate", S({ required: ["confirm"], properties: { confirm: { type: "boolean", const: true } } }), async (req) => s.capture.terminate({ ...req.ctx, requestId: req.id }, req.params.id));
+  app.post("/api/workflows/:id/delete", S({ required: ["confirm"], properties: { confirm: { type: "boolean", const: true } } }), async (req) => s.workflows.remove(req.ctx, req.params.id, req.id));
+  app.get("/api/access-requests", async (req) => s.access.list(req.ctx));
+  app.post("/api/access-requests", S({ properties: { artifactId: { type: "string", maxLength: 40 }, note: { type: "string", maxLength: 500 } } }), async (req) => s.access.request({ ...req.ctx, requestId: req.id }, req.body));
+  app.post("/api/access-requests/:id/decide", S({ required: ["grant"], properties: { grant: { type: "boolean" }, artifactIds: { type: "array", maxItems: 50, items: { type: "string", maxLength: 40 } } } }), async (req) => s.access.decide({ ...req.ctx, requestId: req.id }, req.params.id, req.body));
   app.get("/api/maps/:id", async (req) => s.workmaps.get(req.ctx, req.params.id));
   app.post("/api/maps/:id/confirm", S({ properties: { correction: { type: "string", maxLength: 2000 } } }), async (req) => s.workmaps.confirm(req.ctx, req.params.id, req.body));
   app.get("/api/maps/:id/export", async (req, reply) => {

@@ -47,7 +47,7 @@ export function commandView() {
 export function workflowCard(w) {
   const mods = [["screen", "screen", "Screen"], ["camera", "camera", "Camera"], ["microphone", "mic", "Voice"], ["app_events", "event", "App events"], ["documents", "doc", "Docs"]].filter(([k]) => w.modalities?.[k]);
   return `<article class="card wf-card" data-act="open-wf" data-id="${w.id}">
-    <div class="row between"><span class="eyebrow">${esc(w.kind)} work${w.source === "demo" ? " · sample" : ""}</span></div>
+    <div class="row between"><span class="eyebrow">${esc(w.kind)} work${w.source === "demo" ? " · sample" : ""}</span>${has("ORG_ADMIN", "WORKFLOW_OWNER", "KT_COORDINATOR") ? `<button class="ghost sm danger" data-act="delete-skill" data-id="${w.id}" data-name="${esc(w.name)}">Delete</button>` : ""}</div>
     <h2 class="wf-title"><button class="link" data-act="open-wf" data-id="${w.id}">${esc(w.name)}</button></h2>
     <p class="small muted">${esc(w.description)}</p>
     <div class="mods">${mods.map(([, i, l]) => `<span class="mod">${icon(i, 12)} ${l}</span>`).join("")}</div>

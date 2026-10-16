@@ -168,5 +168,22 @@ export function createWorkflows({ db, storage, cfg }) {
     return { procedures: profile.procedures.length };
   }
 
-  return { list, get, create, quickStart, setParticipants, people, handlers: { understand_workflow: understandJob } };
+  /**
+   * Delete a skill / workflow (managers). Hidden from every list; its sessions in progress are terminated. Approved
+   * knowledge is not destroyed here: its contributor keeps control of it (withdraw it from the knowledge page).
+   */
+  async function remove(ctx, workflowId, requestId) {
+    requirePermission(ctx, "workflow.manage");
+    return T(ctx, async (q) => {
+      const [w] = await q("SELECT id, name FROM workflows WHERE id = $1 AND deleted_at IS NULL", [workflowId]);
+      if (!w) throw httpError(404, "not found");
+      await q("UPDATE workflows SET deleted_at = now(), status = 'archived', updated_at = now() WHERE id = $1", [w.id]);
+      const ended = await q(`UPDATE expert_sessions SET status = 'terminated', ended_at = COALESCE(ended_at, now()), updated_at = now()
+                             WHERE workflow_id = $1 AND status IN ('awaiting_consent','capturing','mapping','debrief') RETURNING id`, [w.id]);
+      await audit(q, { orgId: ctx.orgId, userId: ctx.userId, action: "workflow.delete", targetType: "workflow", targetId: w.id, requestId, metadata: { name: w.name, terminatedSessions: ended.length } });
+      return { deleted: true, terminatedSessions: ended.length };
+    });
+  }
+
+  return { list, get, create, quickStart, setParticipants, people, remove, handlers: { understand_workflow: understandJob } };
 }

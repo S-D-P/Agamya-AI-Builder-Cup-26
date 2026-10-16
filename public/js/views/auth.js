@@ -116,11 +116,25 @@ function signupCard() {
     <a class="small" href="#/login">I already have an account</a>`;
 }
 
+let inviteInfo = null, inviteInfoFor = null;
 function inviteCard(token) {
-  return `<h1>Join</h1><p class="muted">You were invited. Set your name and a password (skip if you already have an account).</p>
-    <label class="field">Your name<input data-draft="in-name" autocomplete="name"></label>
-    <label class="field">Password<input data-draft="in-pw" type="password" autocomplete="new-password"></label>
-    <button class="primary" data-act="accept-invite" data-token="${esc(token ?? "")}" ${state.busy ? "disabled" : ""}>Join</button>`;
+  if (inviteInfoFor !== token) {
+    inviteInfoFor = token; inviteInfo = null;
+    api("POST", "/api/auth/invite-info", { token }).then((x) => { inviteInfo = x; render(); }).catch((e) => { inviteInfo = { error: e.message }; render(); });
+  }
+  if (!inviteInfo) return `<span class="thinking">Opening your invitation</span>`;
+  if (inviteInfo.error) return `<h1>Invitation not available</h1><p class="muted">${esc(inviteInfo.error)}</p><a class="btn" href="#/login">Sign in</a>`;
+  const i = inviteInfo;
+  return `<h1>Join ${esc(i.spaceName)}</h1>
+    <p class="muted">${i.invitedBy ? `${esc(i.invitedBy)} invited` : "You were invited as"} <b>${esc(i.email)}</b>.</p>
+    ${i.hasAccount
+      ? `<p class="callout small">You already have an Agamya account with this email. Enter <b>your own Agamya password</b> (the one you sign in with) to add this space to your account. There is no separate password for a space.</p>
+         <label class="field">Your Agamya password<input data-draft="in-pw" type="password" autocomplete="current-password"></label>`
+      : `<p class="callout small">Create your Agamya account: choose your name and a password of at least 12 characters. This password is yours, for every space you join; there is no separate password for a space.</p>
+         <label class="field">Your name<input data-draft="in-name" autocomplete="name"></label>
+         <label class="field">Choose a password<input data-draft="in-pw" type="password" autocomplete="new-password" minlength="12"></label>`}
+    <button class="primary" data-act="accept-invite" data-token="${esc(token ?? "")}" ${state.busy ? "disabled" : ""}>Join ${esc(i.spaceName)}</button>
+    <p class="small muted">Signed in already with this email? You can also accept from your <a href="#/inbox">Invitations</a> page.</p>`;
 }
 
 async function finishLogin(next = "#/") {
@@ -152,9 +166,9 @@ export function policiesView() {
   const pending = new Set(p.pending);
   for (const d of p.policies) if (!policyDocs[d.id]) { policyDocs[d.id] = "loading"; api("GET", `/api/policies/${d.id}`).then((doc) => { policyDocs[d.id] = doc; render(); }); }
   return `<div class="page-head"><div><div class="eyebrow">Before you continue</div><h1>Policies for ${esc(state.me.org?.name)}</h1>
-    <p>These are versioned. Your acceptance is recorded with the version and a hash of its text. ${p.policies.some((x) => x.isTemplate) ? "<b>Template versions are placeholders, not legal advice;</b> a real space should publish its own reviewed text." : ""} Recording consent is asked separately, each time capture starts.</p></div></div>
+    <p>These are versioned. Your acceptance is recorded with the version and a hash of its text. Recording consent is asked separately, each time capture starts.</p></div></div>
     <div class="grid" style="max-width:900px">${p.policies.map((d) => `<details class="card pad" ${pending.has(d.id) && p.policies.indexOf(d) === 0 ? "open" : ""}>
-      <summary class="row between" style="cursor:pointer"><span><b>${esc(d.title)}</b> <span class="small muted">v${esc(d.version)}</span> ${d.isTemplate ? '<span class="tag amber">template</span>' : ""} ${d.requiredAtSignIn ? "" : '<span class="tag sky">accepted per capture session</span>'}</span>
+      <summary class="row between" style="cursor:pointer"><span><b>${esc(d.title)}</b> <span class="small muted">v${esc(d.version)}</span> ${d.requiredAtSignIn ? "" : '<span class="tag sky">accepted per capture session</span>'}</span>
       ${d.accepted ? '<span class="tag green">accepted</span>' : d.requiredAtSignIn ? '<span class="tag pink">required</span>' : ""}</summary>
       <div class="policy-doc" style="margin-top:10px">${typeof policyDocs[d.id] === "object" ? md(policyDocs[d.id].content_md) : '<span class="thinking">Loading</span>'}</div></details>`).join("")}
     ${p.pending.length ? `<label class="check"><input type="checkbox" id="accept-all" data-focus="accept-all"> I have read and accept the required policies above</label>

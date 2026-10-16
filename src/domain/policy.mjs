@@ -10,7 +10,7 @@ export const POLICY_TYPES = ["TERMS_OF_SERVICE", "PRIVACY_POLICY", "AI_USAGE_POL
 const TITLES = { TERMS_OF_SERVICE: "Terms of Service", PRIVACY_POLICY: "Privacy Policy", AI_USAGE_POLICY: "AI Usage Policy", RECORDING_CONSENT_POLICY: "Recording & Consent Policy", ACCEPTABLE_USE_POLICY: "Acceptable Use Policy" };
 // Accepted once per user per org at sign-in. Recording consent is additionally captured per capture session.
 const REQUIRED_AT_SIGNIN = ["TERMS_OF_SERVICE", "PRIVACY_POLICY", "AI_USAGE_POLICY", "ACCEPTABLE_USE_POLICY"];
-export const TEMPLATE_VERSION = "2026.10-template";
+export const TEMPLATE_VERSION = "2026.10"; // the platform's own policies; a space can publish its own version
 
 export function createPolicy({ db }) {
   /** Latest effective document per type: org-specific version wins over the platform template. */
@@ -27,7 +27,7 @@ export function createPolicy({ db }) {
           const content = fs.readFileSync(path.join(ROOT, "src", "policies", `${type}.md`), "utf8");
           await q(`INSERT INTO policy_documents (org_id, policy_type, version, title, content_md, content_sha256, is_template)
                    VALUES (NULL,$1,$2,$3,$4,$5,true)
-                   ON CONFLICT DO NOTHING`, [type, TEMPLATE_VERSION, `${TITLES[type]} (template)`, content, sha256(content)]);
+                   ON CONFLICT DO NOTHING`, [type, TEMPLATE_VERSION, TITLES[type], content, sha256(content)]);
         }
       });
     },

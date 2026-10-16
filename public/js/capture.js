@@ -4,13 +4,13 @@
 //   Mic     getUserMedia      voice-activity segmentation: only speech segments (≤20 s) are uploaded, as 16 kHz WAV
 // Every upload carries capture time (client clock; the server applies the session's clock offset), is idempotent
 // server-side (sha256), and is retried with backoff. Permission denial degrades gracefully per modality.
-import { state } from "./core.js";
+import { state, csrfFetch } from "./core.js";
 
 async function upload(sessionId, blob, meta, attempt = 0) {
   try {
-    const r = await fetch(`/api/sessions/${sessionId}/media`, {
-      method: "POST", credentials: "same-origin", body: blob,
-      headers: { "content-type": blob.type || "application/octet-stream", "x-csrf-token": state.csrf, "x-modality": meta.modality, "x-kind": meta.kind,
+    const r = await csrfFetch(`/api/sessions/${sessionId}/media`, {
+      method: "POST", body: blob,
+      headers: { "content-type": blob.type || "application/octet-stream", "x-modality": meta.modality, "x-kind": meta.kind,
         "x-captured-at": String(meta.capturedAt), ...(meta.durationMs ? { "x-duration-ms": String(Math.round(meta.durationMs)) } : {}),
         ...(meta.diffScore !== undefined ? { "x-diff-score": String(meta.diffScore), "x-cycle-diff": String(meta.cycleDiff) } : {}), "x-purpose": meta.purpose ?? "narration" },
     });
@@ -131,7 +131,7 @@ export class VoiceCapture {
     };
     seg.rec.stop();
   }
-  stop() { clearInterval(this.timer); if (this.seg) this.endSegment(); this.stream?.getTracks().forEach((t) => t.stop()); this.ctx?.close(); this.stream = null; }
+  stop() { clearInterval(this.timer); if (this.seg) this.endSegment(); this.stream?.getTracks().forEach((t) => t.stop()); if (this.ctx && this.ctx.state !== "closed") this.ctx.close().catch(() => {}); this.ctx = null; this.stream = null; }
   get running() { return Boolean(this.stream); }
 }
 
@@ -160,7 +160,7 @@ export class DraftRecorder {
     this.rec.stop(); await done;
     this.stream.getTracks().forEach((t) => t.stop());
     const wav = await toWav16k(new Blob(this.chunks, { type: this.rec.mimeType }));
-    const r = await fetch("/api/voice/transcribe", { method: "POST", credentials: "same-origin", headers: { "content-type": "audio/wav", "x-csrf-token": state.csrf, ...(language ? { "x-language": language } : {}) }, body: wav.blob });
+    const r = await csrfFetch("/api/voice/transcribe", { method: "POST", headers: { "content-type": "audio/wav", ...(language ? { "x-language": language } : {}) }, body: wav.blob });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(data.error || "transcription failed");
     return data;
@@ -169,8 +169,7 @@ export class DraftRecorder {
 
 async function toWav16k(blob) {
   const ctx = new AudioContext();
-  const decoded = await ctx.decodeAudioData(await blob.arrayBuffer());
-  ctx.close();
+  const decoded = await ctx.decodeAudioData(await blob.arrayBuffer()).finally(() => ctx.close().catch(() => {}));
   const off = new OfflineAudioContext(1, Math.max(1, Math.ceil(decoded.duration * 16000)), 16000);
   const src = off.createBufferSource(); src.buffer = decoded; src.connect(off.destination); src.start();
   const pcm = (await off.startRendering()).getChannelData(0);
@@ -188,7 +187,7 @@ export async function speak(text) {
   if (!state.speak || !text) return;
   try {
     current?.pause();
-    const blob = await fetch("/api/voice/tts", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json", "x-csrf-token": state.csrf }, body: JSON.stringify({ text }) }).then((r) => { if (!r.ok) throw new Error("tts"); return r.blob(); });
+    const blob = await csrfFetch("/api/voice/tts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }) }).then((r) => { if (!r.ok) throw new Error("tts"); return r.blob(); });
     current = new Audio(URL.createObjectURL(blob));
     await current.play();
   } catch {

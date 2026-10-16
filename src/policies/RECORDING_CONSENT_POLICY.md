@@ -1,9 +1,7 @@
-> **Template, not legal advice.** Recording rules vary by jurisdiction and employment context; obtain legal review before use.
+# Recording & Consent Policy
 
-# Recording & Consent Policy (template)
-
-- Capture starts only after the person being observed sees exactly which inputs (screen, camera, microphone) will be captured and agrees.
-- The person can pause capture, exclude any input, or delete any captured moment at any time.
-- Nothing captured becomes organizational knowledge until the expert approves it.
-- Do not capture people who have not consented. Do not capture customer data unless your organization has approved it.
-- Each consent is recorded with the policy version, the inputs consented to, and the time.
+- Capture starts only after you have seen exactly what will be captured (screen, camera, microphone), who will see it, how long it is kept, and agreed.
+- You can go off the record, stop, exclude an input or delete any captured moment at any time. Off the record, nothing is sent or stored.
+- Nothing you capture becomes knowledge for others until you confirm it.
+- Only capture people who have agreed to be recorded, and only customer data your space owner has approved.
+- Each consent is recorded with this policy's version, the inputs you agreed to, and the time.

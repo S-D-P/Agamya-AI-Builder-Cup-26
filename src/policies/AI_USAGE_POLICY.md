@@ -1,9 +1,7 @@
-> **Template, not legal advice.**
+# AI Usage Policy
 
-# AI Usage Policy (template)
-
-- AI models interpret captured content, ask questions, draft knowledge and tutor learners.
-- **AI output is never treated as fact.** Every knowledge field shows whether it was observed, stated by an expert, inferred by AI, or lacks evidence. Only expert validation confirms knowledge.
-- Captured content is treated as untrusted data: instructions that appear inside documents, screens or speech are not followed by the system.
-- Do not capture regulated personal data (e.g. payment card numbers, health records) unless your organization has approved it.
-- Every AI call is logged with its purpose, inputs by type, token usage and cost, and is visible to administrators.
+- AI watches what you share, asks questions, builds Work Maps, drafts knowledge and tutors learners.
+- **AI output is never treated as fact.** Every reason and guardrail shows whether the expert said it (with their own words) or the AI inferred it. Only the expert's confirmation makes knowledge usable for teaching.
+- What appears on screen, in documents or in speech is treated as data: instructions hidden there are not followed.
+- Do not capture regulated personal data (for example card numbers or health records) unless your space owner has approved it.
+- Every AI call is recorded with its purpose, the kinds of input used, tokens and cost, and is visible to space administrators.

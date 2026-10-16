@@ -18,7 +18,8 @@ export function workflowsView(r) {
 // ---------------------------------------------------------------- create
 function createView() {
   if (!has("ORG_ADMIN", "WORKFLOW_OWNER")) return `<div class="card pad">You need the workflow owner role to create workflows.</div>`;
-  if (!people) { api("GET", "/api/people").then((p) => { people = p; render(); }); return `<span class="thinking">Loading</span>`; }
+  if (!people) { people = "loading"; api("GET", "/api/people").then((p) => { people = p; render(); }).catch(() => { people = []; render(); }); }
+  if (people === "loading") return `<span class="thinking">Loading</span>`;
   const inputs = [["screen", "screen", "Screen"], ["camera", "camera", "Camera"], ["microphone", "mic", "Microphone"], ["documents", "doc", "Documents"], ["app_events", "event", "Application events"]];
   const sources = [["live:screen", "Live screen"], ["live:camera", "Live camera"], ["manual", "Narration / typed steps"], ["sim:loom-camera", "Loom camera (simulated)"], ["sim:kitchen-camera", "Kitchen camera (simulated)"], ["sim:payments-console", "Mainframe console (simulated)"], ["sim:revenue-sheet", "Spreadsheet (simulated)"]];
   const pick = (set, kind) => people.map((p) => `<button class="chip" aria-pressed="${set.has(p.id)}" data-act="pick" data-kind="${kind}" data-id="${p.id}">${esc(p.display_name)}</button>`).join("");

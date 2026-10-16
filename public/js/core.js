@@ -24,7 +24,28 @@ export const isSample = () => Boolean(state.me?.org?.sampleKind);
 
 export class ApiError extends Error { constructor(status, body) { super(body?.error || `HTTP ${status}`); this.status = status; this.body = body; } }
 
-export async function api(method, path, body, { raw = false, headers = {} } = {}) {
+export async function api(method, path, body, opts = {}) {
+  try { return await apiOnce(method, path, body, opts); }
+  catch (e) {
+    // Another tab (or a sign-in elsewhere) rotated this session's CSRF token: fetch the current one and retry once.
+    if (e instanceof ApiError && e.status === 403 && /CSRF/i.test(e.message) && method !== "GET" && !opts.retried) {
+      const me = await apiOnce("GET", "/api/auth/me").catch(() => null);
+      if (me?.csrfToken) return apiOnce(method, path, body, { ...opts, retried: true });
+    }
+    throw e;
+  }
+}
+/** fetch() with the session's CSRF token; refreshes the token and retries once if another tab rotated it. */
+export async function csrfFetch(url, init = {}) {
+  const go = () => fetch(url, { credentials: "same-origin", ...init, headers: { ...(init.headers ?? {}), "x-csrf-token": state.csrf } });
+  let r = await go();
+  if (r.status === 403) {
+    const body = await r.clone().json().catch(() => ({}));
+    if (/CSRF/i.test(body.error ?? "")) { await apiOnce("GET", "/api/auth/me").catch(() => null); r = await go(); }
+  }
+  return r;
+}
+async function apiOnce(method, path, body, { raw = false, headers = {} } = {}) {
   const isBlob = body instanceof Blob || body instanceof ArrayBuffer;
   const r = await fetch(path, {
     method, credentials: "same-origin",
