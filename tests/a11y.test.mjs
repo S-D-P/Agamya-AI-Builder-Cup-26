@@ -139,8 +139,10 @@ test("every route renders without axe violations, for each persona (Work and Liv
       await axeCheck(ctx, "landing");
       const d = ctx.w.document;
       assert.match(d.body.textContent, /Agamya for Work[\s\S]*Agamya for Culture/);
-      assert.ok(d.querySelector(".stage svg[role='img'] desc")?.textContent.length > 40, "the animation has a text description");
-      assert.ok(d.querySelector('button[data-act="stage-toggle"][aria-pressed]'), "moving content can be paused (2.2.2)");
+      const art = d.querySelector(".lp-hero-art img");
+      assert.ok(art?.getAttribute("alt")?.length > 80, "the hero artwork has a full text alternative");
+      assert.equal(d.querySelectorAll(".lp-hero-crafts li").length, 6, "each of the six crafts is named in text, in order");
+      assert.ok(art.getAttribute("width") && art.getAttribute("height"), "the image reserves its space (no layout shift)");
       assert.equal(d.querySelectorAll('[data-act="sample"]').length, 0, "no sample or demo entry points");
       const ph = d.querySelector(".video-frame.placeholder");
       assert.ok(ph && /coming soon/i.test(ph.textContent), "an honest placeholder when no video is configured");

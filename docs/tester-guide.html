@@ -1,0 +1,200 @@
+<title>Agamya Tester Guide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* Layout: one reading column; each feature is a numbered test card (the order is the order to test in), with a sticky progress bar. */
+:root {
+  --paper: #f6efe3; --sheet: #fffaf2; --ink: #1d1915; --muted: #5c5148; --line: #dfd2bd;
+  --crimson: #8f1d2c; --indigo: #163a5c; --gold: #7d520c; --ok: #1f6b3a; --ok-soft: #e3f1e6;
+  --display: "Fraunces", Georgia, serif; --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #171411; --sheet: #211c18; --ink: #f1e9dc; --muted: #b9ab98; --line: #3a322a;
+  --crimson: #e2717f; --indigo: #8fb6dc; --gold: #e0b45a; --ok: #7fcf98; --ok-soft: #1f3326; color-scheme: dark } }
+:root[data-theme="dark"] { --paper: #171411; --sheet: #211c18; --ink: #f1e9dc; --muted: #b9ab98; --line: #3a322a;
+  --crimson: #e2717f; --indigo: #8fb6dc; --gold: #e0b45a; --ok: #7fcf98; --ok-soft: #1f3326; color-scheme: dark }
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font: 15px/1.6 var(--body); }
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 22px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; letter-spacing: -.01em; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(30px, 5vw, 44px); line-height: 1.05; }
+h2 { font-size: 22px; line-height: 1.2; }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--indigo); text-underline-offset: 2px; }
+code, .mono { font-family: var(--mono); font-size: 12.5px; }
+code { background: var(--sheet); border: 1px solid var(--line); padding: 1px 5px; border-radius: 5px; word-break: break-word; }
+.eyebrow { font-size: 11.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--crimson); }
+.lede { color: var(--muted); font-size: 16.5px; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 12px; }
+.fact { background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.fact b { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.acct { display: grid; gap: 2px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+button { font: 600 13px/1 var(--body); color: var(--ink); background: var(--sheet); border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px; cursor: pointer; }
+button:hover { border-color: var(--ink); }
+button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px solid var(--indigo); outline-offset: 2px; }
+.progress { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; background: var(--paper); padding-block: 10px; border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.bar { flex: 1; min-width: 140px; height: 8px; background: var(--line); border-radius: 999px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--ok); transition: width .3s; }
+.count { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 14px; }
+.test { background: var(--sheet); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; display: grid; gap: 12px; min-width: 0; }
+.test header { display: flex; gap: 12px; align-items: baseline; }
+.test .n { font-family: var(--mono); color: var(--gold); font-size: 13px; font-weight: 700; flex: none; }
+.test .where { color: var(--muted); font-size: 13.5px; }
+.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.checks li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; padding: 6px 8px; border-radius: 8px; }
+.checks li.done { background: var(--ok-soft); }
+.checks input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--ok); }
+.checks label { cursor: pointer; }
+.checks .expect { display: block; color: var(--muted); font-size: 13.5px; }
+.note { border-left: 3px solid var(--gold); padding: 6px 12px; color: var(--muted); font-size: 14px; }
+.bug { background: var(--sheet); border: 1px dashed var(--crimson); border-radius: 14px; padding: 18px 20px; display: grid; gap: 10px; }
+pre { margin: 0; overflow-x: auto; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 12px; font: 12.5px/1.6 var(--mono); }
+.limits { padding-left: 18px; margin: 0; display: grid; gap: 4px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:10px">
+    <div class="eyebrow">Agamya · tester guide</div>
+    <h1>What you can do in Agamya, and how to test it</h1>
+    <p class="lede">Work through the cards in order. Each line says what to do and what should happen. Tick it when it does. If something else happens, use the bug template at the end.</p>
+  </header>
+
+  <section class="facts" aria-label="Before you start">
+    <div class="fact"><b>App</b><a href="https://agamya-82538920788.us-central1.run.app" target="_blank" rel="noopener">agamya-82538920788.us-central1.run.app</a></div>
+    <div class="fact"><b>Accounts (shared)</b>
+      <div class="acct"><span>Work: <code>judge.work@agamya.example</code></span><span>Culture: <code>judge.culture@agamya.example</code></span><span>Password: <code>agamya-judges-2026</code></span></div>
+      <div class="row"><button type="button" data-copy="judge.work@agamya.example">Copy Work email</button><button type="button" data-copy="agamya-judges-2026">Copy password</button></div></div>
+    <div class="fact"><b>You need</b><span>Chrome or Edge on a computer, a microphone, and headphones (so Moti does not hear itself). A phone is optional for the camera tests.</span></div>
+  </section>
+  <p class="note">The shared accounts are seen by every tester. Use test data only: no real customer names, card numbers or personal details.</p>
+
+  <div class="progress" aria-live="polite"><span class="count" id="count">0 of 0 checked</span><div class="bar" aria-hidden="true"><i id="bar"></i></div><button type="button" id="reset">Clear my ticks</button></div>
+
+  <main id="tests" style="display:grid;gap:16px"></main>
+
+  <section class="bug" aria-labelledby="bug-h">
+    <h2 id="bug-h">Report a bug</h2>
+    <p>Copy this, fill it in, and attach a screenshot. One bug per report.</p>
+    <pre id="tpl">Test card and line: (for example 3.4)
+Page address: (copy from the address bar)
+Account: Work judge / Culture judge / my own
+Browser and device: (for example Chrome on Windows)
+Steps:
+1.
+2.
+What I expected:
+What happened instead: (exact error text, if any)
+Screenshot: attached</pre>
+    <div class="row"><button type="button" data-copy-from="tpl">Copy template</button></div>
+  </section>
+
+  <section style="display:grid;gap:8px" aria-labelledby="lim-h">
+    <h2 id="lim-h">Known limits (not bugs)</h2>
+    <ul class="limits">
+      <li>Agamya does not send email. Invitations open your own Gmail or copy a link.</li>
+      <li>Work Map steps need AI. If AI is unavailable, sessions are typed and the map page says so.</li>
+      <li>Narration in languages other than English, Hindi, Marathi and Kannada is labelled "not yet reviewed by a native speaker".</li>
+      <li>A practice result is practice, not a certification.</li>
+      <li>Screen sharing needs a computer browser. On phones, use the camera.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+// Each test: [title, where, [[do, expect], ...]]. The order is the order to test in.
+const TESTS = [
+  ["Landing and sign-in", "Open the app while signed out", [
+    ["Look at the landing page.", "The painted artwork shows six crafts with their names under each panel. Two starts: Work (screen) and Culture (camera)."],
+    ["Click Sign in, then Fill in Work judge.", "Email and password are filled; focus moves to Sign in."],
+    ["Sign in and accept the policies.", "The policies are titled plainly (no \"template\"). After accepting you reach Home."],
+    ["Press Back (bottom-left) on any page except Home.", "You return to the previous page."],
+  ]],
+  ["Record your work with Moti (Work, screen)", "Home → Start with your screen", [
+    ["Type a task name, choose a language, press I agree, start.", "The browser asks for the microphone and which screen to share."],
+    ["Share a screen with a test spreadsheet. Work and explain aloud, e.g. \"anything over fifty thousand I hold for the controller\". Then pause.", "Your screen stays visible. After a pause Moti asks one short question, by voice and in text."],
+    ["Type a line in \"Type instead of speaking\" and press Enter.", "It appears as You; Moti may reply."],
+    ["Press Off the record, talk, then Back on the record.", "A banner says nothing is captured. Nothing said meanwhile appears in the Work Map."],
+    ["Press I'm done.", "You go to \"Building your Work Map\" with no error."],
+  ]],
+  ["Record a skill (Culture, camera)", "Sign in as the Culture judge → Start with your camera", [
+    ["Choose मराठी (Marathi) and start.", "Your camera picture stays visible for the whole session (never black)."],
+    ["Speak in Marathi and pause.", "Moti asks in Marathi."],
+    ["Click Home in the top bar during the session.", "Home opens; buttons keep working (no \"Maximum call stack\" error)."],
+  ]],
+  ["Your sessions on Home", "Home → Your recent sessions", [
+    ["Look right after recording.", "The session is listed at once with a status in words (for example \"Building the Work Map\")."],
+    ["Wait a few seconds on Home.", "The status changes by itself to \"Ready: answer Moti's questions and confirm\"."],
+    ["For a session you did not finish, press Build the Work Map.", "The map starts building."],
+    ["Press Terminate on a session and confirm.", "It disappears from the list and cannot be resumed."],
+  ]],
+  ["Work Map, debrief and confirm", "Open a session from Home", [
+    ["Read the steps.", "Each step has a screen moment, decision, reason and guardrails. Your words appear in quotes; anything you did not say is labelled AI-inferred."],
+    ["Open \"What Moti is unsure about\", then press Start the debrief and answer.", "Moti asks those questions and explains the process back."],
+    ["Press Finish the debrief, then Yes, that's how it works.", "The map says \"confirmed by the expert\"; Practise this and Export for agents appear."],
+    ["Press Export for agents.", "A file downloads with STOP AND ASK A PERSON and NEVER lines."],
+  ]],
+  ["Listen to the Work Map", "On a Work Map → Listen to this Work Map", [
+    ["Choose हिन्दी (Hindi) and press Listen.", "After up to about 30 seconds, an audio player and a Hindi transcript appear. Your quotes are kept as you said them."],
+    ["Choose Bengali.", "The narration is labelled \"not yet reviewed by a native speaker\"."],
+  ]],
+  ["Practise with Moti as tutor", "Confirmed Work Map → Practise this", [
+    ["Choose ಕನ್ನಡ (Kannada) or हिन्दी (Hindi) and share your screen.", "Moti greets you in that language."],
+    ["Start doing the task the wrong way, e.g. say \"I'm posting this 72,000 invoice now\".", "Moti stops you (\"... would stop here. Why do you think?\") and can show the expert's screen moment."],
+    ["Say \"I'm finished\" (or press I'm finished).", "A summary appears: handled well, practise next, and \"not a certification\"."],
+  ]],
+  ["AI agents that stop where the expert would stop", "Confirmed Work Map → Use this Work Map with AI agents", [
+    ["Type \"Post invoice INV-204 for 72,000 rupees\" and press Would … stop here?", "A verdict (Stop / Ask a person / Proceed / Not covered) with the expert's own words."],
+    ["Try a routine action, e.g. a small invoice from a known supplier.", "Proceed, naming the step."],
+    ["Open Connect an agent, name it, press Create a key.", "A key is shown once, with MCP and REST instructions."],
+    ["Press Revoke on that key and confirm.", "It is marked revoked."],
+  ]],
+  ["Impact", "Menu → Impact", [
+    ["Open the page after a session.", "Real counts: minutes captured, questions asked, maps confirmed, stops in practice, agent checks, languages and AI cost. Missing data says \"not enough data yet\"."],
+  ]],
+  ["Spaces, people and sharing", "Work judge for missions; Culture judge for sharing", [
+    ["Groups → create a group. Then KT missions → New mission.", "The new group appears under Receiver groups. The step pills are small, not tall arches."],
+    ["People (or Administration) → invite an email → Create invitation.", "Send with Gmail opens Gmail with the message written; Copy link works. Agamya sends nothing itself."],
+    ["Open the invitation link in a private window.", "It names the space and says whether to create a password or use your existing one. There is no separate space password."],
+    ["As a learner with nothing shared, open Learning → Ask a teacher to share.", "\"Request sent\". The teacher sees it in the inbox with Share selected / Decline, and you are told the outcome."],
+    ["Capture a skill → Delete on a skill, and confirm.", "It disappears from the list."],
+  ]],
+];
+
+const KEY = "agamya.tester.ticks.v1";
+let ticks = {};
+try { ticks = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch { ticks = {}; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(ticks)); } catch { /* storage unavailable: ticks last for this visit */ } };
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+const root = document.getElementById("tests");
+root.innerHTML = TESTS.map(([title, where, steps], i) => `<section class="test" aria-labelledby="t${i}">
+  <header><span class="n">${i + 1}</span><div><h2 id="t${i}">${esc(title)}</h2><div class="where">${esc(where)}</div></div></header>
+  <ul class="checks">${steps.map(([d, e], j) => { const id = `c${i + 1}-${j + 1}`; return `<li class="${ticks[id] ? "done" : ""}"><input type="checkbox" id="${id}" ${ticks[id] ? "checked" : ""}>
+    <label for="${id}"><b>${i + 1}.${j + 1}</b> ${esc(d)}<span class="expect">Expected: ${esc(e)}</span></label></li>`; }).join("")}</ul></section>`).join("");
+
+function update() {
+  const all = [...root.querySelectorAll('input[type="checkbox"]')], done = all.filter((x) => x.checked).length;
+  document.getElementById("count").textContent = `${done} of ${all.length} checked`;
+  document.getElementById("bar").style.width = `${all.length ? (100 * done) / all.length : 0}%`;
+}
+root.addEventListener("change", (e) => {
+  if (!e.target.matches('input[type="checkbox"]')) return;
+  ticks[e.target.id] = e.target.checked; e.target.closest("li").classList.toggle("done", e.target.checked); save(); update();
+});
+document.getElementById("reset").addEventListener("click", () => {
+  ticks = {}; save(); root.querySelectorAll('input[type="checkbox"]').forEach((x) => { x.checked = false; x.closest("li").classList.remove("done"); }); update();
+});
+function copy(text, btn) {
+  const done = () => { const t = btn.textContent; btn.textContent = "Copied"; setTimeout(() => (btn.textContent = t), 1500); };
+  navigator.clipboard?.writeText(text).then(done, () => { const r = document.createRange(); const el = btn.dataset.copyFrom ? document.getElementById(btn.dataset.copyFrom) : null; if (el) { r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); } btn.textContent = "Press Ctrl+C"; });
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-copy], [data-copy-from]");
+  if (!b) return;
+  copy(b.dataset.copy ?? document.getElementById(b.dataset.copyFrom).textContent, b);
+});
+update();
+</script>

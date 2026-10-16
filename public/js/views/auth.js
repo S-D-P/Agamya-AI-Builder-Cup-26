@@ -3,7 +3,6 @@
 import { state, api, esc, act, go, draft, render, md } from "../core.js";
 import { icon } from "../icons.js";
 import { orb, pearl } from "../persona.js";
-import { stageMarkup, startStage } from "../stage.js";
 import { announce } from "../a11y.js";
 
 let config = null;
@@ -22,42 +21,55 @@ export function authView(r) {
   if (r.name === "login") return page(loginCard());
   if (r.name === "signup") { if (r.id === "personal") spaceType = "living"; if (r.id === "enterprise") spaceType = "work"; return page(signupCard()); }
   if (r.name === "invite") return page(inviteCard(r.id));
-  setTimeout(startStage, 0);
   return landing();
 }
 
-const page = (card) => `<div class="landing"><header class="land-head">${brand()}<span class="spacer"></span><a class="btn ghost" href="#/">Back</a></header>
+const page = (card) => `<div class="landing light"><header class="land-head">${brand()}<span class="spacer"></span><a class="btn ghost" href="#/">Back</a></header>
   <main id="main" class="land-auth"><form class="auth-card card pad" data-noop-submit>${card}</form></main></div>`;
+
+// The six crafts in the hero artwork, left to right (the captions are the artwork's text alternative, in order).
+const CRAFTS = [["Kathak", "ghungroo and alta · Jaipur"], ["Weaving", "the loom · Bengal"], ["Sword care", "the swordsmith · Seki"],
+  ["Voice", "the vocal coach · Seoul"], ["Debugging", "the engineer · Bengaluru"], ["Investing", "the decision · Singapore"]];
 
 function landing() {
   const steps = [["Capture", "The expert works as usual, on screen or on camera, and talks if they like. Only what they agree to is captured."],
     ["Understand", "Moti watches quietly and asks one short question at a natural pause, about what just happened."],
     ["Validate", "A short debrief, then Moti explains it back until the expert says: yes, that is how it works."],
-    ["Transfer", "The next person practises on their own screen. Moti steps in before a wrong decision, in the expert's words."]];
-  return `<div class="landing">
-  <header class="lp-head">${brand()}<span class="spacer"></span><a class="btn ghost sm" href="#/login">Sign in</a></header>
+    ["Transfer", "The next person practises on their own screen. Moti steps in before a wrong decision, in the expert's words. AI agents check the same guardrails."]];
+  const work = config.allowSignup ? "#/signup/enterprise" : "#/login", culture = config.allowSignup ? "#/signup/personal" : "#/login";
+  return `<div class="landing light">
+  <header class="lp-top">${brand()}<span class="spacer"></span><a class="btn ghost sm" href="#how-h" data-act="scroll-how">How it works</a><a class="btn sm" href="#/login">Sign in</a></header>
   <main id="main" class="lp-main" tabindex="-1">
-    <div class="stage-wrap" style="position:relative">${stageMarkup()}<div class="stage-scrim" aria-hidden="true"></div>
-      <div class="stage-copy"><h1>Pass on what you know, without losing why.</h1>
-        <p>From a dancer's footwork to a month-end payment run: Agamya watches an expert work, asks why at the right moment, and teaches the next person to decide the same way.</p></div></div>
+    <section class="lp-hero" aria-labelledby="hero-h">
+      <figure class="lp-hero-art">
+        <div class="lp-hero-frame"><img src="/img/agamya-hero.webp" srcset="/img/agamya-hero-960.webp 960w, /img/agamya-hero.webp 1672w" sizes="(max-width: 1200px) 100vw, 1200px"
+          width="1672" height="941" fetchpriority="high" alt="Agamya: six painted panels joined by one flowing ribbon. A Kathak dancer's feet with ghungroo bells and red alta; hands at a loom weaving blue and gold silk; a swordsmith cleaning a blade below Mount Fuji; a singer at a microphone with a sound wave; code on a dark screen; a hand marking a market chart beside a bonsai."></div>
+        <figcaption><ol class="lp-hero-crafts">${CRAFTS.map(([c, d]) => `<li><b>${c}</b><span>${d}</span></li>`).join("")}</ol></figcaption>
+      </figure>
+      <div class="lp-hero-copy">
+        <h1 id="hero-h">Pass on what you know, without losing why.</h1>
+        <p>From a dancer's footwork to a month-end payment run: Agamya watches an expert work, asks why at the right moment, and teaches the next person, and the next AI agent, to decide the same way.</p>
+        <div class="row wrap hero-cta"><a class="btn primary lg work" href="${work}">Start with your screen</a><a class="btn lg culture" href="${culture}">Start with your camera</a></div>
+      </div>
+    </section>
+    ${config.judges?.length ? `<p class="lp-judges"><b>Judging?</b> Ready-made Work and Culture accounts are on the <a href="#/login">sign-in page</a>.</p>` : ""}
     <section class="lp-modes" aria-label="Choose how you use Agamya">
       <article class="lp-mode work" aria-labelledby="m-work">
         <div class="eyebrow">Agamya for Work</div>
         <h2 id="m-work">Before your expert retires, their judgment is captured, mapped and taught.</h2>
-        <ul><li>Share your screen and work; Moti asks why at natural pauses</li><li>A Work Map of every step, reason and guardrail, in the expert's words</li><li>A tutor that stops the new hire before a wrong decision</li><li>Schedules, permissions and groups for your organization</li></ul>
-        ${config.allowSignup ? `<a class="btn primary" href="#/signup/enterprise">Start with your screen</a>` : `<a class="btn primary" href="#/login">Sign in</a>`}
+        <ul><li>Share your screen and work; Moti asks why at natural pauses</li><li>A Work Map of every step, reason and guardrail, in the expert's words</li><li>A tutor that stops the new hire before a wrong decision</li><li>AI agents that stop where the expert would stop</li></ul>
+        <a class="btn primary" href="${work}">Start with your screen</a>
       </article>
       <article class="lp-mode culture" aria-labelledby="m-culture">
         <div class="eyebrow">Agamya for Culture</div>
         <h2 id="m-culture">Crafts, dance, recipes and languages, kept with their reasons.</h2>
-        <ul><li>Point your camera and practise; Moti asks in your language</li><li>Private by default; you choose who learns from you</li></ul>
-        ${config.allowSignup ? `<a class="btn primary" href="#/signup/personal">Start with your camera</a>` : ""}
+        <ul><li>Point your camera and practise; Moti asks in your language</li><li>Listen to the lesson in Hindi, Marathi, Kannada, Bengali and more</li><li>Private by default; you choose who learns from you</li></ul>
+        <a class="btn primary" href="${culture}">Start with your camera</a>
       </article>
     </section>
-    ${config.judges?.length ? `<p class="lp-judges"><b>Judging?</b> Ready-made Work and Culture accounts are on the <a href="#/login">sign-in page</a>.</p>` : ""}
-    <section class="lp-section" aria-labelledby="how-h"><h2 id="how-h">How Agamya works</h2>
+    <section class="lp-section" aria-labelledby="how-h"><h2 id="how-h" tabindex="-1">How Agamya works</h2>
       <ol class="lp-steps">${steps.map(([t, d], n) => `<li><span class="n">0${n + 1}</span><b>${t}</b><span class="small muted">${d}</span></li>`).join("")}</ol>
-      <p class="small muted" style="margin-top:16px">Built on Gemini (Vertex AI) and Google Cloud. A practice result shows understanding in simulation; it is not a certification.</p>
+      <p class="small muted" style="margin-top:16px">Built on Gemini (Gemini Live, Vertex AI, Agent Engine) and Google Cloud. A practice result shows understanding in simulation; it is not a certification.</p>
     </section>
     ${videoSection()}
   </main>
@@ -65,7 +77,6 @@ function landing() {
 </div>`;
 }
 
-/** "See how Agamya works": a real player only when a video is configured (DEMO_VIDEO_URL); otherwise an honest, non-playable placeholder. */
 function videoSection() {
   const v = config.demoVideo;
   if (v?.url) {
@@ -145,6 +156,8 @@ async function finishLogin(next = "#/") {
 
 export async function authClick(e) {
   const t = e.target.closest("[data-act]");
+  // In-page link: the hash is the router, so scroll and focus the section instead of navigating.
+  if (t?.dataset.act === "scroll-how") { e.preventDefault(); const h = document.getElementById("how-h"); h?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); h?.focus({ preventScroll: true }); return; }
   if (!t) return;
   const a = t.dataset.act;
   if (a === "space") { spaceType = t.dataset.v; return render(); }
