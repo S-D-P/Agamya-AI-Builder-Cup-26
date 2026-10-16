@@ -167,3 +167,46 @@ test("Work Map sharing and space separation (second test report)", { timeout: 18
     });
   } finally { await h.close(); }
 });
+
+test("optional space passcode: owner sets it; members enter it once per sign-in", { timeout: 120000 }, async () => {
+  const h = await harness({ env: { SIGNUP_RATE_MAX: "500" } });
+  try {
+    const owner = await account(h, "boss@p.test", "Java Developers");
+    const inv = (await owner.u.post("/api/admin/invitations", { email: "dev@p.test", roles: ["LEARNER"] })).body;
+    const dev = user(h.app);
+    assert.equal((await dev.post("/api/auth/accept-invite", { token: inv.inviteUrl.split("/").pop(), displayName: "Dev", password: "a-long-test-pass-42" })).status, 200);
+    await dev.acceptPolicies();
+    assert.equal((await dev.post("/api/spaces/passcode", { passcode: "secret-123" })).status, 403, "only the owner sets it");
+    assert.equal((await owner.u.post("/api/spaces/passcode", { passcode: "123" })).status, 400, "too short");
+    assert.equal((await owner.u.post("/api/spaces/passcode", { passcode: "secret-123" })).status, 200);
+    assert.equal((await owner.u.get("/api/maps")).status, 200, "the owner's own session stays unlocked");
+    const me = (await dev.get("/api/auth/me")).body;
+    assert.equal(me.org.locked, true);
+    assert.equal((await dev.get("/api/maps")).status, 423, "space content is closed until the passcode is entered");
+    assert.equal((await dev.get("/api/spaces")).status, 200, "switching spaces still works");
+    assert.equal((await dev.post("/api/space/unlock", { passcode: "wrong-one" })).status, 401);
+    assert.equal((await dev.post("/api/space/unlock", { passcode: "secret-123" })).status, 200);
+    assert.equal((await dev.get("/api/maps")).status, 200);
+    await owner.u.post("/api/spaces/passcode", { passcode: "new-secret-456" });
+    assert.equal((await dev.get("/api/maps")).status, 423, "changing the passcode locks it again for everyone else");
+    await owner.u.post("/api/spaces/passcode", { passcode: null });
+    assert.equal((await dev.get("/api/maps")).status, 200, "removing it opens the space to members again");
+    const audit = await h.s.db.system((q) => q("SELECT action, outcome FROM audit_events WHERE action LIKE 'space.%' ORDER BY created_at"));
+    assert.ok(audit.some((a) => a.action === "space.unlock" && a.outcome === "denied"), "failed attempts are audited");
+  } finally { await h.close(); }
+});
+
+test("a new member can unlock a passcode space before accepting its policies", { timeout: 60000 }, async () => {
+  const h = await harness({ env: { SIGNUP_RATE_MAX: "500" } });
+  try {
+    const owner = await account(h, "own2@p.test", "Locked Co");
+    const inv = (await owner.u.post("/api/admin/invitations", { email: "new2@p.test", roles: ["LEARNER"] })).body;
+    await owner.u.post("/api/spaces/passcode", { passcode: "secret-789" });
+    const u = user(h.app);
+    assert.equal((await u.post("/api/auth/accept-invite", { token: inv.inviteUrl.split("/").pop(), displayName: "New", password: "a-long-test-pass-42" })).status, 200);
+    assert.equal((await u.post("/api/space/unlock", { passcode: "secret-789" })).status, 200, "unlock comes before the policies");
+    const me = await u.acceptPolicies();
+    assert.equal(me.org.locked, false);
+    assert.equal((await u.get("/api/maps")).status, 200);
+  } finally { await h.close(); }
+});

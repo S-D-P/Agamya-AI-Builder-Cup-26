@@ -28,6 +28,7 @@ export function spacesView() {
       ${s.id === spaces.active ? `<a class="btn sm" href="#/">Open</a>` : `<button class="sm" data-act="enter-space" data-id="${s.id}">Enter ${esc(s.name)}</button>`}</li>`).join("")}</ul>
     ${!mine.length ? `<p class="small muted">You only have sample spaces so far.</p>` : ""}
   </section>
+  ${state.me?.roles?.includes("ORG_OWNER") && state.me?.org ? passcodeCard() : ""}
   ${state.config?.allowSignup !== false ? createCard() : ""}`;
 }
 
@@ -60,6 +61,29 @@ export function inboxView() {
   </section>`;
 }
 
+/** A space with a passcode: shown instead of the space until the passcode is entered in this sign-in session. */
+export function unlockView() {
+  const o = state.me.org;
+  return `<div class="landing light"><header class="land-head">${brandMark()}<span class="spacer"></span><a class="btn ghost" href="#/spaces">Switch space</a></header>
+    <main id="main" class="land-auth" tabindex="-1"><form class="auth-card card pad stack" data-noop-submit>
+      <h1>${esc(o.name)} is locked</h1>
+      <p class="muted">Its owner protects this space with a passcode, on top of your own password. Enter it once for this sign-in. Ask the space owner if you do not have it.</p>
+      <label class="field" for="unlock-code">Space passcode<input id="unlock-code" data-draft="unlock-code" type="password" autocomplete="off" required aria-required="true"></label>
+      <button class="primary" data-act="space-unlock">Unlock ${esc(o.name)}</button>
+      <p class="small muted">Your other spaces are not affected. <a href="#/spaces">Switch space</a></p>
+    </form></main></div>`;
+}
+const brandMark = () => `<a class="brand" href="#/spaces"><span class="brand-name">Agamya</span></a>`;
+
+/** Owner only: protect this space with a passcode (each person still signs in with their own account). */
+function passcodeCard() {
+  const has = state.me.org.hasPasscode;
+  return `<section class="card pad stack" style="margin-top:16px" aria-labelledby="pc-h"><h2 id="pc-h" class="h3">${icon("lock", 15)} Passcode for ${esc(state.me.org.name)}</h2>
+    <p class="small muted">${has ? "This space is protected." : "Optional."} Everyone entering this space types the passcode once per sign-in, on top of their own password. Share it only with people you invite. Changing it locks the space again for everyone else.</p>
+    <div class="row wrap"><label class="field" for="pc-new" style="flex:1;min-width:220px">${has ? "New passcode" : "Passcode"} (at least 6 characters)<input id="pc-new" data-draft="pc-new" type="password" autocomplete="new-password" minlength="6"></label></div>
+    <div class="row"><button class="primary sm" data-act="passcode-set">${has ? "Change passcode" : "Protect with a passcode"}</button>${has ? `<button class="ghost sm" data-act="passcode-remove">Remove passcode</button>` : ""}</div></section>`;
+}
+
 /** First-run guide: helps choose a mode and start; dismissible, remembered on this device only. */
 export function firstRunGuide() {
   if (store.get("ag.guide.dismissed") === "1") return "";
@@ -77,6 +101,21 @@ export async function spacesClick(e) {
   const el = e.target.closest("[data-act]");
   if (!el) return false;
   const a = el.dataset.act;
+  if (a === "space-unlock") {
+    act("unlock", async () => { await api("POST", "/api/space/unlock", { passcode: state.drafts["unlock-code"] ?? "" }); state.drafts["unlock-code"] = ""; state.me = await api("GET", "/api/auth/me"); announce("Unlocked."); location.hash = "#/"; location.reload(); });
+    return true;
+  }
+  if (a === "passcode-set") {
+    const code = state.drafts["pc-new"] ?? "";
+    if (code.length < 6) { toast("Use at least 6 characters.", true); document.getElementById("pc-new")?.focus(); return true; }
+    act("passcode", async () => { await api("POST", "/api/spaces/passcode", { passcode: code }); state.drafts["pc-new"] = ""; state.me = await api("GET", "/api/auth/me"); toast("Passcode saved. Share it only with people you invite."); });
+    return true;
+  }
+  if (a === "passcode-remove") {
+    if (!confirm("Remove the passcode? People in this space will only need their own password.")) return true;
+    act("passcode", async () => { await api("POST", "/api/spaces/passcode", { passcode: null }); state.me = await api("GET", "/api/auth/me"); toast("Passcode removed."); });
+    return true;
+  }
   if (a === "dismiss-guide") { store.set("ag.guide.dismissed", "1"); announce("Guide dismissed."); render(); document.getElementById("main")?.focus(); return true; }
   if (a === "enter-space") { act("space", async () => { await api("POST", "/api/auth/switch-org", { orgId: el.dataset.id }); location.hash = "#/"; location.reload(); }); return true; }
   if (a === "inv-accept" || a === "inv-decline") {

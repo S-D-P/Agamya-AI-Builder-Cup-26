@@ -157,7 +157,8 @@ export function createIdentity({ db, cfg }) {
       if (!token || token.length < 40) return null;
       const rows = await db.system((q) => q(
         `SELECT s.id AS session_id, s.user_id, s.active_org_id, s.csrf_hash, s.expires_at, s.last_seen_at,
-                u.email, u.display_name, u.status, u.preferred_language, m.roles, m.status AS membership_status, o.name AS org_name, o.is_demo, o.experience, o.sample_kind
+                u.email, u.display_name, u.status, u.preferred_language, m.roles, m.status AS membership_status, o.name AS org_name, o.is_demo, o.experience, o.sample_kind,
+                o.passcode_hash IS NOT NULL AS has_passcode, (s.active_org_id = ANY(s.unlocked_orgs)) AS unlocked
          FROM auth_sessions s JOIN users u ON u.id = s.user_id
          LEFT JOIN memberships m ON m.org_id = s.active_org_id AND m.user_id = s.user_id
          LEFT JOIN organizations o ON o.id = s.active_org_id
@@ -175,7 +176,38 @@ export function createIdentity({ db, cfg }) {
         sessionId: r.session_id, userId: r.user_id, email: r.email, displayName: r.display_name, csrfHash: r.csrf_hash,
         orgId: active ? r.active_org_id : null, orgName: active ? r.org_name : null, isDemoOrg: Boolean(r.is_demo), experience: r.experience ?? "work", sampleKind: r.sample_kind ?? null, language: r.preferred_language ?? null,
         roles: active ? r.roles : [], personId,
+        // Optional space passcode: until it is entered in this sign-in session, only sign-in and space switching work.
+        spaceHasPasscode: Boolean(active && r.has_passcode), spaceLocked: Boolean(active && r.has_passcode && !r.unlocked),
       };
+    },
+
+    /** Owner: set, change or remove this space's passcode. Changing it locks the space again in every other session. */
+    async setSpacePasscode(ctx, { passcode = null }, requestId) {
+      if (!ctx.orgId || !ctx.roles?.includes("ORG_OWNER")) throw httpError(403, "only the owner of this space can set its passcode");
+      const code = passcode == null ? null : String(passcode);
+      if (code !== null && (code.length < 6 || code.length > 128)) throw httpError(400, "use a passcode of at least 6 characters");
+      const hash = code === null ? null : await hashPassword(code);
+      return db.system(async (q) => {
+        await q("UPDATE organizations SET passcode_hash = $2, passcode_set_at = CASE WHEN $2::text IS NULL THEN NULL ELSE now() END WHERE id = $1", [ctx.orgId, hash]);
+        await q("UPDATE auth_sessions SET unlocked_orgs = array_remove(unlocked_orgs, $1) WHERE $1 = ANY(unlocked_orgs)", [ctx.orgId]);
+        if (hash) await q("UPDATE auth_sessions SET unlocked_orgs = array_append(unlocked_orgs, $2) WHERE id = $1", [ctx.sessionId, ctx.orgId]);
+        await audit(q, { orgId: ctx.orgId, userId: ctx.userId, action: hash ? "space.passcode_set" : "space.passcode_remove", targetType: "organization", targetId: ctx.orgId, requestId });
+        return { passcode: Boolean(hash) };
+      });
+    },
+
+    /** Enter the space's passcode for this sign-in session. */
+    async unlockSpace(ctx, { passcode }, requestId) {
+      if (!ctx.orgId) throw httpError(400, "no space selected");
+      const [o] = await db.system((q) => q("SELECT passcode_hash FROM organizations WHERE id = $1", [ctx.orgId]));
+      if (!o?.passcode_hash) return { unlocked: true };
+      const ok = await verifyPassword(String(passcode ?? ""), o.passcode_hash);
+      await db.system(async (q) => {
+        if (ok) await q("UPDATE auth_sessions SET unlocked_orgs = array_append(array_remove(unlocked_orgs, $2), $2) WHERE id = $1", [ctx.sessionId, ctx.orgId]);
+        await audit(q, { orgId: ctx.orgId, userId: ctx.userId, action: "space.unlock", outcome: ok ? "success" : "denied", targetType: "organization", targetId: ctx.orgId, requestId });
+      });
+      if (!ok) throw httpError(401, "that passcode is not right; ask the space owner");
+      return { unlocked: true };
     },
 
     async logout(ctx, requestId) {

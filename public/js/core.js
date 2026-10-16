@@ -57,6 +57,7 @@ async function apiOnce(method, path, body, { raw = false, headers = {} } = {}) {
   if (data?.csrfToken) state.csrf = data.csrfToken;
   if (r.status === 401 && !path.startsWith("/api/auth/")) { state.me = null; go("#/login"); }
   if (r.status === 428) { go("#/policies"); }
+  if (r.status === 423 && state.me?.org && !state.me.org.locked) { state.me.org.locked = true; render(); }
   if (!r.ok) throw new ApiError(r.status, data);
   return data;
 }

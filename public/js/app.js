@@ -21,7 +21,7 @@ import { transfersView, transfersClick, transfersChange, invalidateTransfers } f
 import { progressView, invalidateProgress } from "./views/progress.js";
 import { livingHomeView, journeyView, skillsView, sharingView, livingClick, livingChange, invalidateLiving } from "./views/living.js";
 import { radarView, invalidateRadar } from "./views/radar.js";
-import { spacesView, inboxView, spacesClick, spacesChange, firstRunGuide, loadInbox, invalidateSpaces } from "./views/spaces.js";
+import { spacesView, inboxView, spacesClick, spacesChange, firstRunGuide, loadInbox, invalidateSpaces, unlockView } from "./views/spaces.js";
 import { groupsView, groupsClick, groupsChange, invalidateGroups } from "./views/groups.js";
 import { missionsView, missionsClick, missionsChange, invalidateMissions } from "./views/missions.js";
 import { storageView, invalidateStorage } from "./views/storage.js";
@@ -129,6 +129,7 @@ function draw() {
   if (state.me.policies?.pending?.length && r.name !== "policies") { go("#/policies"); return; }
   // Signed in without a space (e.g. every membership ended): show their invitations and how to create a space.
   if (!state.me.org) { root.innerHTML = workShell(r.name === "inbox" ? inboxView(r) : spacesView(r), r); return; }
+  if (state.me.org.locked && !["spaces", "inbox"].includes(r.name)) { root.innerHTML = unlockView(); return; }
   if (r.name === "policies") { root.innerHTML = `${sampleBar()}<main id="main" class="policy-page">${policiesView()}</main>`; return; }
   const e = exp();
   const view = e.views[r.name] ?? e.views.home;

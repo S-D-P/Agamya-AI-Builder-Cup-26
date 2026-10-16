@@ -132,8 +132,9 @@ export async function buildServer(s) {
   // ---------------------------------------------------------------- authentication, CSRF, policy gate, request context
   const PUBLIC = new Set(["/api/auth/config", "/api/auth/login", "/api/auth/demo-login", "/api/samples", "/api/auth/signup", "/api/auth/accept-invite", "/api/auth/invite-info", "/api/auth/oidc/start", "/api/auth/oidc/callback"]);
   // Spaces, the inbox and invitations work before a space's policies are accepted: they are how a person moves between spaces.
-  const POLICY_EXEMPT = (url) => url.startsWith("/api/auth/") || url.startsWith("/api/policies") || url.startsWith("/api/spaces") || url.startsWith("/api/inbox") || url.startsWith("/api/invitations/");
+  const POLICY_EXEMPT = (url) => url === "/api/space/unlock" || url.startsWith("/api/auth/") || url.startsWith("/api/policies") || url.startsWith("/api/spaces") || url.startsWith("/api/inbox") || url.startsWith("/api/invitations/");
   const policyCache = new Map();
+  const SPACE_LOCK_EXEMPT = (url) => url.startsWith("/api/auth/") || url.startsWith("/api/spaces") || url.startsWith("/api/inbox") || url.startsWith("/api/invitations/") || url === "/api/space/unlock";
 
   // Cloud Run answers on more than one hostname; cookies and Origin checks are bound to PUBLIC_ORIGIN, so send
   // page loads on any other host to the canonical one.
@@ -160,6 +161,9 @@ export async function buildServer(s) {
     if (url === "/api/test/scenarios" || url.startsWith("/api/test/")) { if (!cfg.testHooks) throw httpError(404, "not found"); return; }
     if (!req.ctx) throw httpError(401, "sign in required");
     if (stateChanging && !safeEqual(sha256(String(req.headers["x-csrf-token"] ?? "")), req.ctx.csrfHash)) throw httpError(403, "invalid or missing CSRF token");
+    // A space with a passcode stays closed until the passcode is entered in this sign-in session (switching spaces,
+    // the space list and invitations stay available so nobody is stuck).
+    if (req.ctx.spaceLocked && !SPACE_LOCK_EXEMPT(url)) throw httpError(423, "this space is locked: enter its passcode");
     if (req.ctx.orgId && !POLICY_EXEMPT(url)) {
       const key = `${req.ctx.sessionId}:${req.ctx.orgId}`;
       let pending = policyCache.get(key);
@@ -237,9 +241,12 @@ export async function buildServer(s) {
   app.get("/api/auth/me", async (req) => {
     const c = ctxOf(req);
     const csrfToken = await s.identity.rotateCsrf(c);
-    return { user: { id: c.userId, email: c.email, displayName: c.displayName, language: c.language ?? null }, org: c.orgId ? { id: c.orgId, name: c.orgName, isDemo: c.isDemoOrg, experience: c.experience, sampleKind: c.sampleKind } : null, roles: c.roles, personId: c.personId,
+    return { user: { id: c.userId, email: c.email, displayName: c.displayName, language: c.language ?? null }, org: c.orgId ? { id: c.orgId, name: c.orgName, isDemo: c.isDemoOrg, experience: c.experience, sampleKind: c.sampleKind, hasPasscode: c.spaceHasPasscode, locked: c.spaceLocked } : null, roles: c.roles, personId: c.personId,
       organizations: await s.identity.organizationsOf(c.userId), csrfToken, policies: c.orgId ? await s.policy.status(c) : null };
   });
+  app.post("/api/space/unlock", { ...S({ required: ["passcode"], properties: { passcode: { type: "string", maxLength: 128 } } }), config: { rateLimit: { max: 8, timeWindow: "15 minutes", keyGenerator: (req) => `unlock:${req.ctx?.userId ?? req.ip}` } } },
+    async (req) => s.identity.unlockSpace(req.ctx, req.body, req.id));
+  app.post("/api/spaces/passcode", S({ properties: { passcode: { type: ["string", "null"], maxLength: 128 } } }), async (req) => s.identity.setSpacePasscode(req.ctx, req.body, req.id));
   app.post("/api/auth/switch-org", S({ required: ["orgId"], properties: { orgId: id } }), async (req) => { await s.identity.switchOrg(req.ctx, req.body.orgId); policyCache.clear(); return { ok: true }; });
 
   // ---------------------------------------------------------------- sample spaces (one isolated space per visitor)

@@ -109,7 +109,7 @@ const TESTS = [
   ["Landing and sign-in", "Open the app while signed out", [
     ["Look at the landing page.", "The painted artwork shows six crafts with their names under each panel. Two starts: Work (screen) and Culture (camera)."],
     ["Click Sign in, then Fill in Work judge.", "Email and password are filled; focus moves to Sign in."],
-    ["Sign in and accept the policies.", "The policies are titled plainly (no \"template\"). After accepting you reach Home."],
+    ["Sign in and accept the policies.", "The policies are titled plainly (no \"template\"). After accepting you reach Home, with Start buttons and your recent sessions."],
     ["Press Back (bottom-left) on any page except Home.", "You return to the previous page."],
   ]],
   ["Record your work with Moti (Work, screen)", "Home → Start with your screen", [
@@ -150,6 +150,21 @@ const TESTS = [
     ["Try a routine action, e.g. a small invoice from a known supplier.", "Proceed, naming the step."],
     ["Open Connect an agent, name it, press Create a key.", "A key is shown once, with MCP and REST instructions."],
     ["Press Revoke on that key and confirm.", "It is marked revoked."],
+  ]],
+  ["Sharing and access", "A confirmed Work Map; a second account invited to the same space", [
+    ["As the expert, press Yes, that's how it works.", "Agamya asks \"Who should learn from this?\": Everyone in the space, chosen groups and people, or only me."],
+    ["Choose Only me. Sign in as the second account (a learner) and open Learning.", "The map's title is listed under \"Other Work Maps in this space\" with Request access; it cannot be opened."],
+    ["Press Request access. As the expert (or a space admin or coordinator), open the inbox and press Share with them.", "The learner is notified and the map appears under \"Work Maps you can learn from\"."],
+    ["As the expert, press Share on the map and choose a group.", "Only members of that group (plus the expert and admins) can open it."],
+    ["As the learner, ask a question on the Learning page about the shared map.", "Ask answers from the Work Map, quoting the expert, instead of \"nothing approved\"."],
+    ["Create a second space from Spaces and open its inbox.", "Only that space's notifications are listed; other spaces show only an unread count with Switch."],
+    ["Look at your name chip in a space you created.", "Your role reads \"owner · admin\"."],
+  ]],
+  ["Space passcode (optional)", "Spaces page, as the space owner", [
+    ["Set a passcode of at least 6 characters.", "\"Passcode saved\". Your own session stays open."],
+    ["Sign in as another member of that space.", "\"<space> is locked\": they must enter the passcode once; a wrong one is refused."],
+    ["Enter the right passcode.", "The space opens (policies first if they are new). Other spaces are not affected."],
+    ["As the owner, change the passcode.", "Everyone else must enter the new one."],
   ]],
   ["Impact", "Menu → Impact", [
     ["Open the page after a session.", "Real counts: minutes captured, questions asked, maps confirmed, stops in practice, agent checks, languages and AI cost. Missing data says \"not enough data yet\"."],
