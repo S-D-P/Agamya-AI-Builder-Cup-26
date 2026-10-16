@@ -156,7 +156,7 @@ export async function answerFromKnowledge({ question, language = null, items }) 
   if (!res.ok) return { source: "fallback", error: res.error, language: lang ?? "en", answer: null, insufficient: true, unavailable: true, citations: [] };
   const d = res.data;
   const citations = d.citations.map((c) => ({ ...c, item: byId.get(c.itemId) })).filter((c) => c.item && quoteVerified(c.quote, c.item.text))
-    .map((c) => ({ judgmentId: c.item.judgmentId, title: c.item.title, quote: c.quote, expertName: c.item.expertName }));
+    .map((c) => ({ judgmentId: c.item.judgmentId, mapSessionId: c.item.mapSessionId ?? null, title: c.item.title, quote: c.quote, expertName: c.item.expertName }));
   const grounded = d.grounded && !d.insufficient && citations.length > 0;
   // The model's text is only shown when it is grounded, when it is itself the "not enough evidence" reply, or a clarifying question.
   // A confident answer whose citations failed verification is withheld (answer: null) and replaced by an honest message upstream.

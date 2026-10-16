@@ -115,13 +115,26 @@ export function createWorkMaps({ db, capture, storage }) {
   }
 
   // ---------------------------------------------------------------- reading and confirming
-  async function readable(q, ctx, row) {
+  // Access, the same everywhere (map page, lists, Learning, Ask, listening, practice):
+  //   the expert who recorded it: always (drafts included); space owners, admins and coordinators: everything in the space;
+  //   everyone else: a CONFIRMED map shared with the whole space, with one of their groups, or with them by name.
+  const MANAGERS = ["ORG_OWNER", "ORG_ADMIN", "KT_COORDINATOR"];
+  const isManager = (ctx) => Boolean(ctx.roles?.some((r) => MANAGERS.includes(r)));
+  async function myGroups(q, ctx) {
+    if (!ctx.personId) return [];
+    return (await q("SELECT group_id FROM group_members WHERE person_id = $1 AND removed_at IS NULL", [ctx.personId])).map((r) => r.group_id);
+  }
+  async function readable(q, ctx, row, groups = null) {
     if (!row) return false;
-    if (row.expert_person_id === ctx.personId) return true;
+    if (row.expert_person_id === ctx.personId || isManager(ctx)) return true;
     if (row.status !== "confirmed") return false;
     if (row.visibility === "organization") return true;
-    return row.visibility === "named" && row.shared_with.includes(ctx.personId);
+    if (row.visibility !== "named") return false;
+    if ((row.shared_with ?? []).includes(ctx.personId)) return true;
+    const mine = groups ?? (await myGroups(q, ctx));
+    return (row.shared_groups ?? []).some((g) => mine.includes(g));
   }
+  const accessOf = (ctx, row) => (row.expert_person_id === ctx.personId ? "owner" : isManager(ctx) ? "manager" : "shared");
 
   async function get(ctx, sessionId) {
     requirePermission(ctx, "workflow.read");
@@ -138,6 +151,7 @@ export function createWorkMaps({ db, capture, storage }) {
       const moment = (seq) => { const f = frames.find((x) => x.seq === seq); return f ? { mediaId: f.media_asset_id, offsetSec: t0 ? Math.max(0, Math.round((new Date(f.captured_at) - new Date(t0)) / 1000)) : null, text: f.text } : null; };
       return {
         id: m.id, sessionId: s.id, workflowId: m.workflow_id, title: m.title, status: m.status, version: m.version, expertName: m.expert_name, mine, sessionStatus: s.status,
+        access: accessOf(ctx, m), canShare: mine || isManager(ctx), sharing: mine || isManager(ctx) ? await sharingOf(q, m) : null,
         language: m.source_language, unclear: mine ? m.unclear : [], visibility: m.visibility, confirmedAt: m.confirmed_at,
         steps: m.map.steps.map((st) => ({ ...st, moments: st.eventIds.map((e) => moment(Number(e.slice(1)))).filter(Boolean) })),
         counts: { steps: m.map.steps.length, judgments: m.map.steps.filter((x) => x.isJudgment).length, guardrails: m.map.steps.reduce((n, x) => n + x.guardrails.length, 0) },
@@ -161,15 +175,74 @@ export function createWorkMaps({ db, capture, storage }) {
     });
   }
 
+  async function sharingOf(q, m) {
+    const people = m.shared_with?.length ? await q("SELECT id, display_name FROM people WHERE id = ANY($1::uuid[])", [m.shared_with]) : [];
+    const groups = m.shared_groups?.length ? await q("SELECT id, name FROM groups WHERE id = ANY($1::uuid[]) AND archived_at IS NULL", [m.shared_groups]) : [];
+    return { visibility: m.visibility, people: people.map((p) => ({ id: p.id, name: p.display_name })), groups: groups.map((g) => ({ id: g.id, name: g.name })), chosen: Boolean(m.sharing_chosen_at) };
+  }
+
+  /** Who should learn from this? Everyone in the space, chosen groups, chosen people, or only the expert. */
+  async function setSharing(ctx, sessionId, { visibility, people = [], groups = [] } = {}) {
+    requirePermission(ctx, "workflow.read");
+    if (!["private", "named", "organization"].includes(visibility)) throw httpError(400, "choose who can see it");
+    return T(ctx, async (q) => {
+      const s = await loadSession(q, sessionId);
+      const [m] = await q("SELECT w.*, p.display_name AS expert_name FROM work_maps w JOIN people p ON p.id = w.expert_person_id WHERE w.session_id = $1", [s.id]);
+      if (!m || !(await readable(q, ctx, m))) throw httpError(404, "work map not found");
+      if (m.expert_person_id !== ctx.personId && !isManager(ctx)) throw httpError(403, "only the expert who recorded it, or a space admin or coordinator, can share it");
+      const ids = (xs) => [...new Set((Array.isArray(xs) ? xs : []).filter((x) => UUID.test(String(x))))].slice(0, 200);
+      const validPeople = visibility === "named" ? (await q("SELECT id FROM people WHERE id = ANY($1::uuid[]) AND id <> $2", [ids(people), m.expert_person_id])).map((r) => r.id) : [];
+      const validGroups = visibility === "named" ? (await q("SELECT id FROM groups WHERE id = ANY($1::uuid[]) AND archived_at IS NULL", [ids(groups)])).map((r) => r.id) : [];
+      if (visibility === "named" && !validPeople.length && !validGroups.length) throw httpError(400, "choose at least one person or group");
+      const before = new Set(m.visibility === "named" ? m.shared_with : []);
+      await q("UPDATE work_maps SET visibility = $2, shared_with = $3, shared_groups = $4, sharing_chosen_at = now(), updated_at = now() WHERE id = $1", [m.id, visibility, validPeople, validGroups]);
+      await audit(q, { orgId: ctx.orgId, userId: ctx.userId, action: "workmap.sharing", targetType: "work_map", targetId: m.id, requestId: ctx.requestId, metadata: { from: m.visibility, to: visibility, people: validPeople.length, groups: validGroups.length } });
+      if (m.status === "confirmed") for (const pid of validPeople.filter((x) => !before.has(x) && x !== ctx.personId)) {
+        await notifyPerson(q, { orgId: ctx.orgId, personId: pid, kind: "workmap.shared", title: `${m.expert_name} shared a Work Map with you: ${m.title}`, link: `#/map/${s.id}`, dedupeKey: `wm-share:${m.id}:${pid}` });
+      }
+      return { visibility, people: validPeople.length, groups: validGroups.length };
+    });
+  }
+
+  /** Confirmed maps in this space the person cannot open yet: titles only, so they can ask for access. */
+  async function catalog(ctx) {
+    requirePermission(ctx, "workflow.read");
+    return T(ctx, async (q) => {
+      const groups = await myGroups(q, ctx);
+      const rows = await q(`SELECT w.id, w.session_id, w.title, w.status, w.visibility, w.shared_with, w.shared_groups, w.expert_person_id, p.display_name AS expert_name,
+                                   EXISTS (SELECT 1 FROM access_requests r WHERE r.work_map_id = w.id AND r.requester_person_id = $1 AND r.status = 'pending') AS requested
+                            FROM work_maps w JOIN people p ON p.id = w.expert_person_id JOIN workflows wf ON wf.id = w.workflow_id
+                            WHERE w.status = 'confirmed' AND wf.deleted_at IS NULL ORDER BY w.confirmed_at DESC LIMIT 100`, [ctx.personId ?? null]);
+      const out = [];
+      for (const r of rows) if (!(await readable(q, ctx, r, groups))) out.push({ workMapId: r.id, title: r.title, expertName: r.expert_name, requested: r.requested });
+      return out;
+    });
+  }
+
+  /** Confirmed Work Maps this person may read, as Ask sources (the same access rule as everywhere else). */
+  async function readableForAsk(ctx) {
+    return T(ctx, async (q) => {
+      const groups = await myGroups(q, ctx);
+      const rows = await q(`SELECT w.id, w.session_id, w.title, w.version, w.map, w.status, w.visibility, w.shared_with, w.shared_groups, w.expert_person_id, p.display_name AS expert_name
+                            FROM work_maps w JOIN people p ON p.id = w.expert_person_id JOIN workflows wf ON wf.id = w.workflow_id
+                            WHERE w.status = 'confirmed' AND wf.deleted_at IS NULL ORDER BY w.confirmed_at DESC LIMIT 12`);
+      const out = [];
+      for (const r of rows) if (await readable(q, ctx, r, groups)) out.push(r);
+      return out;
+    });
+  }
+
   async function list(ctx) {
     requirePermission(ctx, "workflow.read");
     return T(ctx, async (q) => {
-      const rows = await q(`SELECT w.id, w.session_id, w.title, w.status, w.version, w.visibility, w.shared_with, w.expert_person_id, w.created_at, w.confirmed_at, p.display_name AS expert_name, wf.name AS workflow_name,
+      const groups = await myGroups(q, ctx);
+      const rows = await q(`SELECT w.id, w.session_id, w.title, w.status, w.version, w.visibility, w.shared_with, w.shared_groups, w.expert_person_id, w.created_at, w.confirmed_at, p.display_name AS expert_name, wf.name AS workflow_name,
                                    jsonb_array_length(w.map->'steps') AS steps
                             FROM work_maps w JOIN people p ON p.id = w.expert_person_id JOIN workflows wf ON wf.id = w.workflow_id
                             WHERE w.status <> 'withdrawn' AND wf.deleted_at IS NULL ORDER BY w.created_at DESC LIMIT 100`);
       const out = [];
-      for (const r of rows) if (await readable(q, ctx, r)) out.push({ id: r.id, sessionId: r.session_id, title: r.title, status: r.status, version: r.version, steps: r.steps, expertName: r.expert_name, workflowName: r.workflow_name, mine: r.expert_person_id === ctx.personId, createdAt: r.created_at });
+      for (const r of rows) if (await readable(q, ctx, r, groups)) out.push({ id: r.id, sessionId: r.session_id, title: r.title, status: r.status, version: r.version, steps: r.steps, expertName: r.expert_name, workflowName: r.workflow_name,
+        mine: r.expert_person_id === ctx.personId, access: accessOf(ctx, r), visibility: r.visibility, createdAt: r.created_at, confirmedAt: r.confirmed_at });
       return out;
     });
   }
@@ -247,5 +320,5 @@ export function createWorkMaps({ db, capture, storage }) {
     return { ...meta, languageName: LISTEN_LANGUAGES[language], reviewed: LISTEN_REVIEWED.has(language), audioUrl: meta.audio ? `/api/maps/${sessionId}/listen/audio?language=${language}` : null };
   }
 
-  return { liveTurn, markLive, listen, setOffRecord, finishPhase, get, confirm, list, exportForAgents, startTutor, recordIntervention, finishTutor, getRun, handlers: { build_work_map: buildJob } };
+  return { liveTurn, markLive, listen, setSharing, catalog, readableForAsk, setOffRecord, finishPhase, get, confirm, list, exportForAgents, startTutor, recordIntervention, finishTutor, getRun, handlers: { build_work_map: buildJob } };
 }

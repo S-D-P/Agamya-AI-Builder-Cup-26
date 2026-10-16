@@ -58,7 +58,7 @@ export async function buildServices(cfg, { log = createLogger(cfg), modelAdapter
   const analytics = createAnalytics({ db });
   const transfers = createTransfers({ db, capture });
   const gaps = createGaps({ db });
-  const askService = createAsk({ db });
+  const askService = createAsk({ db, maps: () => workmaps }); // Work Maps are created below; looked up at call time
   const groups = createGroups({ db });
   const missions = createMissions({ db, storage, cfg, workflows, capture, transfers });
   const notifications = createNotifications({ db });
@@ -472,6 +472,10 @@ export async function buildServer(s) {
     async (req) => s.workmaps.liveTurn(req.ctx, req.params.id, { role: "expert", text: req.body.text }));
   app.post("/api/live/:id/finish", S({ required: ["phase"], properties: { phase: { type: "string", enum: ["capture", "debrief"] } } }), async (req) => s.workmaps.finishPhase(req.ctx, req.params.id, req.body.phase));
   app.get("/api/maps", async (req) => s.workmaps.list(req.ctx));
+  app.get("/api/maps/catalog", async (req) => s.workmaps.catalog(req.ctx));
+  app.post("/api/maps/:id/sharing", S({ required: ["visibility"], properties: { visibility: { type: "string", enum: ["private", "named", "organization"] },
+    people: { type: "array", maxItems: 200, items: { type: "string", maxLength: 40 } }, groups: { type: "array", maxItems: 100, items: { type: "string", maxLength: 40 } } } }),
+    async (req) => s.workmaps.setSharing({ ...req.ctx, requestId: req.id }, req.params.id, req.body));
   // Guardrail agents. In the app (cookie session): connect, list, revoke, try. For agents (bearer key, no cookies):
   // /agent/v1/check, /agent/v1/map and the MCP endpoint /agent/v1/mcp. Rate-limited per key.
   app.post("/api/maps/:id/agent-keys", S({ properties: { label: { type: "string", maxLength: 80 } } }), async (req) => s.agents.createKey({ ...req.ctx, requestId: req.id }, req.params.id, req.body));
@@ -502,8 +506,8 @@ export async function buildServer(s) {
   app.post("/api/sessions/:id/terminate", S({ required: ["confirm"], properties: { confirm: { type: "boolean", const: true } } }), async (req) => s.capture.terminate({ ...req.ctx, requestId: req.id }, req.params.id));
   app.post("/api/workflows/:id/delete", S({ required: ["confirm"], properties: { confirm: { type: "boolean", const: true } } }), async (req) => s.workflows.remove(req.ctx, req.params.id, req.id));
   app.get("/api/access-requests", async (req) => s.access.list(req.ctx));
-  app.post("/api/access-requests", S({ properties: { artifactId: { type: "string", maxLength: 40 }, note: { type: "string", maxLength: 500 } } }), async (req) => s.access.request({ ...req.ctx, requestId: req.id }, req.body));
-  app.post("/api/access-requests/:id/decide", S({ required: ["grant"], properties: { grant: { type: "boolean" }, artifactIds: { type: "array", maxItems: 50, items: { type: "string", maxLength: 40 } } } }), async (req) => s.access.decide({ ...req.ctx, requestId: req.id }, req.params.id, req.body));
+  app.post("/api/access-requests", S({ properties: { artifactId: { type: "string", maxLength: 40 }, workMapId: { type: "string", maxLength: 40 }, note: { type: "string", maxLength: 500 } } }), async (req) => s.access.request({ ...req.ctx, requestId: req.id }, req.body));
+  app.post("/api/access-requests/:id/decide", S({ required: ["grant"], properties: { grant: { type: "boolean" }, artifactIds: { type: "array", maxItems: 50, items: { type: "string", maxLength: 43 } } } }), async (req) => s.access.decide({ ...req.ctx, requestId: req.id }, req.params.id, req.body));
   app.get("/api/maps/:id", async (req) => s.workmaps.get(req.ctx, req.params.id));
   app.post("/api/maps/:id/confirm", S({ properties: { correction: { type: "string", maxLength: 2000 } } }), async (req) => s.workmaps.confirm(req.ctx, req.params.id, req.body));
   app.get("/api/maps/:id/export", async (req, reply) => {

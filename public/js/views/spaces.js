@@ -47,9 +47,10 @@ function createCard() {
 
 export function inboxView() {
   if (!inbox) { loadInbox().then(render); return `<span class="thinking">Loading</span>`; }
-  return `<div class="page-head"><div><h1>${t("Invitations and notifications")}</h1><p>Only what concerns you. Notifications name the mission or space, never its private content.</p></div>
+  return `<div class="page-head"><div><h1>${t("Invitations and notifications")}</h1><p>Only what concerns you in ${esc(state.me?.org?.name ?? "this space")}. Notifications name the mission or space, never its private content.</p></div>
     ${inbox.notifications.some((n) => !n.read) ? `<button class="sm" data-act="read-all">Mark all as read</button>` : ""}</div>
   ${inbox.invitations.length ? `<section class="card pad stack" aria-labelledby="ib-inv"><h2 id="ib-inv">${t("Invitations")}</h2>${inbox.invitations.map(invitationRow).join("")}</section>` : ""}
+  ${inbox.otherSpaces?.length ? `<p class="callout small" role="note">Each space keeps its own notifications. Unread in your other spaces: ${inbox.otherSpaces.map((o) => `<b>${esc(o.spaceName)}</b> (${o.unread}) <button class="sm" data-act="enter-space" data-id="${o.spaceId}">Switch</button>`).join(" · ")}</p>` : ""}
   ${accessInboxSection()}
   <section class="card pad stack" style="margin-top:16px" aria-labelledby="ib-n"><h2 id="ib-n">${t("Notifications")}</h2>
     ${inbox.notifications.length ? `<ul class="plain notif-list">${inbox.notifications.map((n) => `<li class="notif ${n.read ? "" : "unread"}">

@@ -25,10 +25,10 @@ export function accessInboxSection() {
   if (!data) { load(); return ""; }
   if (!data.incoming.length) return "";
   return `<section class="card pad stack" style="margin-top:16px" aria-labelledby="ib-acc"><h2 id="ib-acc">Requests to see knowledge</h2>
-    <p class="small muted">Only you decide what you share. Granting adds this person to the people your knowledge is shared with; you can change it any time from the knowledge page.</p>
-    <ul class="plain">${data.incoming.map((r) => `<li class="access-req"><div><b>${esc(r.requester)}</b> ${r.item ? `asked to see <b>${esc(r.item.title)}</b>` : "would like to learn from you"} <span class="small muted">· ${ago(r.createdAt)}</span>
+    <p class="small muted">Granting adds this person to the people it is shared with; nothing else changes. You can change sharing at any time on the Work Map or knowledge page.</p>
+    <ul class="plain">${data.incoming.map((r) => `<li class="access-req"><div><b>${esc(r.requester)}</b> ${r.item ? `asked to ${r.item.kind === "workmap" ? "open the Work Map" : "see"} <b>${esc(r.item.title)}</b>` : "would like to learn from you"} <span class="small muted">· ${ago(r.createdAt)}</span>
       ${r.note ? `<div class="small">“${esc(r.note)}”</div>` : ""}</div>
-      ${r.item ? "" : data.myKnowledge.length ? `<fieldset class="small"><legend>Choose what to share</legend>${data.myKnowledge.map((k) => `<label class="check"><input type="checkbox" data-grant-for="${r.id}" value="${k.id}"> ${esc(k.title)}</label>`).join("")}</fieldset>` : `<p class="small muted">You have no approved knowledge to share yet.</p>`}
+      ${r.item ? "" : data.myKnowledge.length ? `<fieldset class="small"><legend>Choose what to share</legend>${data.myKnowledge.map((k) => `<label class="check"><input type="checkbox" data-grant-for="${r.id}" value="${k.id}"> ${esc(k.title)}</label>`).join("")}</fieldset>` : `<p class="small muted">Nothing confirmed to share yet. Confirm a Work Map first (open it from Home and press "Yes, that's how it works").</p>`}
       <div class="row"><button class="primary sm" data-act="access-decide" data-id="${r.id}" data-grant="1" ${!r.item && !data.myKnowledge.length ? "disabled" : ""}>${r.item ? "Share with them" : "Share selected"}</button>
         <button class="sm" data-act="access-decide" data-id="${r.id}" data-grant="0">Decline</button></div></li>`).join("")}</ul></section>`;
 }

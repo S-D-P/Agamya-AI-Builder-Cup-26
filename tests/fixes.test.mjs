@@ -97,3 +97,73 @@ test("fixes from user testing", { timeout: 180000 }, async (t) => {
     });
   } finally { await h.close(); }
 });
+
+test("Work Map sharing and space separation (second test report)", { timeout: 180000 }, async (t) => {
+  const h = await harness({ env: { SIGNUP_RATE_MAX: "500" } });
+  try {
+    const teacher = await account(h, "guru@s.test", "Guru Home", "living");
+    const join = async (email, roles) => {
+      const inv = (await teacher.u.post("/api/admin/invitations", { email, roles })).body;
+      const u = user(h.app);
+      assert.equal((await u.post("/api/auth/accept-invite", { token: inv.inviteUrl.split("/").pop(), displayName: email.split("@")[0], password: "a-long-test-pass-42" })).status, 200);
+      return { u, me: await u.acceptPolicies() };
+    };
+    const learner = await join("shishya@s.test", ["LEARNER"]);
+    const other = await join("mitra@s.test", ["LEARNER"]);
+    const coord = await join("sanyojak@s.test", ["KT_COORDINATOR"]);
+
+    // The teacher records and confirms a Work Map.
+    const st = (await teacher.u.post("/api/live/start", { kind: "camera", name: "Peanut subji", language: "mr" })).body;
+    const sid = st.sessionId;
+    await teacher.u.post(`/api/sessions/${sid}/consent`, { modalities: ["CAMERA", "MICROPHONE"], clientTime: Date.now() });
+    await teacher.u.post(`/api/live/${sid}/text`, { text: "anything over fifty thousand I hold" });
+    await teacher.u.post(`/api/live/${sid}/finish`, { phase: "capture" });
+    await waitFor(async () => { const r = (await teacher.u.get(`/api/maps/${sid}`)).body; return r.steps && !r.building; }, { timeoutMs: 20000 });
+
+    await t.test("the teacher always sees their own map; a coordinator sees every map; a learner sees nothing yet", async () => {
+      const own = (await teacher.u.get(`/api/maps/${sid}`)).body;
+      assert.equal(own.access, "owner"); assert.equal(own.canShare, true);
+      assert.equal((await coord.u.get(`/api/maps/${sid}`)).body.access, "manager", "admins and coordinators see all, drafts included");
+      assert.equal((await learner.u.get(`/api/maps/${sid}`)).status, 404);
+      assert.equal((await learner.u.get("/api/maps/catalog")).body.length, 0, "drafts are not even listed");
+    });
+
+    await teacher.u.post(`/api/maps/${sid}/confirm`, {});
+
+    await t.test("confirmed and private (Personal space default): learners see the title and can ask for access", async () => {
+      assert.equal((await learner.u.get(`/api/maps/${sid}`)).status, 404);
+      const cat = (await learner.u.get("/api/maps/catalog")).body;
+      assert.equal(cat.length, 1); assert.equal(cat[0].title.length > 0, true);
+      const req = await learner.u.post("/api/access-requests", { workMapId: cat[0].workMapId });
+      assert.equal(req.status, 200, JSON.stringify(req.body));
+      const inc = (await teacher.u.get("/api/access-requests")).body.incoming;
+      assert.equal(inc[0].item.kind, "workmap");
+      assert.equal((await other.u.post(`/api/access-requests/${inc[0].id}/decide`, { grant: true })).status, 403, "a learner cannot grant");
+      assert.equal((await coord.u.post(`/api/access-requests/${inc[0].id}/decide`, { grant: true })).status, 200, "a coordinator can grant");
+      assert.equal((await learner.u.get(`/api/maps/${sid}`)).status, 200);
+      assert.equal((await other.u.get(`/api/maps/${sid}`)).status, 404, "granting one person shares with that person only");
+    });
+
+    await t.test("share with a group, then with everyone; only the expert or an admin/coordinator may share", async () => {
+      const g = (await teacher.u.post("/api/groups", { name: "Kitchen circle" })).body;
+      await teacher.u.post(`/api/groups/${g.id}/members`, { personIds: [other.me.personId] });
+      assert.equal((await learner.u.post(`/api/maps/${sid}/sharing`, { visibility: "organization" })).status, 403);
+      assert.equal((await teacher.u.post(`/api/maps/${sid}/sharing`, { visibility: "named", groups: [g.id] })).status, 200);
+      assert.equal((await other.u.get(`/api/maps/${sid}`)).status, 200, "group members can open it");
+      assert.equal((await learner.u.get(`/api/maps/${sid}`)).status, 404, "the earlier one-person grant was replaced by the new choice");
+      assert.equal((await coord.u.post(`/api/maps/${sid}/sharing`, { visibility: "organization" })).status, 200);
+      assert.equal((await learner.u.get(`/api/maps/${sid}`)).status, 200, "everyone in the space");
+      assert.ok((await learner.u.get("/api/maps")).body.some((m) => m.sessionId === sid));
+      const ask = (await learner.u.post("/api/ask", { question: "What do you do over the limit?" })).body;
+      assert.doesNotMatch(ask.answer ?? "", /Nothing has been confirmed and shared/, "Ask now uses the shared Work Map");
+    });
+
+    await t.test("each space keeps its own notifications", async () => {
+      await teacher.u.post("/api/spaces", { name: "Java Developers", kind: "enterprise" });
+      await teacher.u.acceptPolicies();
+      const inbox = (await teacher.u.get("/api/inbox")).body;
+      assert.equal(inbox.notifications.filter((n) => n.spaceName === "Guru Home").length, 0, "no notifications from the other space are listed");
+      assert.ok(inbox.otherSpaces.some((o) => o.spaceName === "Guru Home" && o.unread > 0), "only a count, with a way to switch");
+    });
+  } finally { await h.close(); }
+});

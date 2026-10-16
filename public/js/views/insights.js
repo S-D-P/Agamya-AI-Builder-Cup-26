@@ -17,6 +17,7 @@ async function load() {
 
 export function insightsView() {
   if (!has("ORG_ADMIN", "WORKFLOW_OWNER", "REVIEWER")) return `<div class="card pad">${icon("lock", 16)} Insights are available to admins, workflow owners and reviewers.</div>`;
+  if (!workflow()) return `<div class="card pad">No workflow in this space yet. Insights appear after the first captured session. Measured outcomes are also on the <a href="#/impact">Impact</a> page.</div>`;
   if (!data || data.wf !== workflow().id) { load(); return `<span class="thinking">Gathering evidence</span>`; }
   const tabs = [["transfer", "Transfer"], ["cost", "AI cost & efficiency"], ["risk", "Knowledge risk"], ["gaps", "Gaps & conflicts"], ["log", "Engine log"]];
   return `<div class="page-head"><div><div class="eyebrow">${esc(workflow().name)}</div><h1>Insights</h1><p>Measured, with the method and limits stated next to every number.</p></div>

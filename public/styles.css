@@ -650,3 +650,6 @@ fieldset > legend { padding: 0; margin-bottom: 8px; }
 @media (max-width: 480px) { .lp-hero-crafts { grid-template-columns: repeat(2, minmax(0, 1fr)); } .lp-hero-crafts li:nth-child(odd) { border-left: 0; } .lp-hero-crafts li:nth-child(4) { border-left: 1px solid var(--lp-line); } }
 .landing.light .auth-card { background: #fffaf2; border-color: var(--lp-line); }
 .landing.light .land-head { border-bottom: 1px solid var(--lp-line); }
+.share fieldset { border: 0; padding: 0; margin: 0; }
+.share fieldset > label.check { display: flex; font-weight: 600; }
+.share .sh-pick { margin-left: 26px; padding-left: 12px; border-left: 2px solid var(--line); }

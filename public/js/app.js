@@ -3,6 +3,10 @@
 // All authorization is enforced by the server; navigation only reflects it.
 import { accessClick, invalidateAccess } from "./views/access.js";
 import { impactView, invalidateImpact } from "./views/impact.js";
+import { mapsToLearn, myMaps, mapListsClick, invalidateMapLists } from "./views/maplists.js";
+// Learning and the knowledge pages show Work Maps first (they are what live sessions produce), then the older items.
+const learnWithMaps = (r) => (r.id ? apprenticeView(r) : `<div class="page-head"><div><h1>${isLiving() ? "Learning" : "My lessons"}</h1></div></div>${mapsToLearn()}<div style="margin-top:18px">${apprenticeView(r)}</div>`);
+const knowledgeWithMaps = (r) => (r.id ? knowledgeView(r) : `${myMaps()}<div style="margin-top:18px">${knowledgeView(r)}</div>`);
 import { state, api, esc, onRender, render, route, go, has, setWorkflow, workflow, act, isLiving, isSample, store, toast } from "./core.js";
 import { icon } from "./icons.js";
 import { authView, authClick, policiesView, policiesClick, brand, loadAuthConfig } from "./views/auth.js";
@@ -34,19 +38,19 @@ const SHARED_VIEWS = { spaces: [spacesView, () => {}, () => {}], inbox: [inboxVi
 const WORK = {
   views: {
     home: [commandView, commandClick], transfers: [transfersView, transfersClick, transfersChange], workflows: [workflowsView, workflowsClick, workflowsChange],
-    capture: [captureView, sessionClick, sessionChange], session: [sessionView, sessionClick, sessionChange], knowledge: [knowledgeView, knowledgeClick, knowledgeChange],
-    progress: [progressView, () => {}], learn: [apprenticeView, apprenticeClick], insights: [insightsView, insightsClick], admin: [adminView, adminClick],
+    capture: [captureView, sessionClick, sessionChange], session: [sessionView, sessionClick, sessionChange], knowledge: [knowledgeWithMaps, knowledgeClick, knowledgeChange],
+    progress: [progressView, () => {}], learn: [learnWithMaps, apprenticeClick], insights: [insightsView, insightsClick], admin: [adminView, adminClick],
     radar: [radarView, () => {}], storage: [storageView, () => {}], impact: [impactView, () => {}], ...SHARED_VIEWS,
   },
   nav: [["home", "home", "Home", () => true], ["missions", "flows", "KT missions", () => true], ["radar", "alert", "Knowledge at risk", () => has(OWN, A, C, O, R, AU)], ["transfers", "users", "Knowledge transfers", () => true], ["workflows", "flows", "Workflows", () => true],
     ["knowledge", "knowledge", "Knowledge library", () => has(E, O, R, A)], ["groups", "users", "Groups", () => true], ["progress", "check", "Learner progress", () => has(A, O, R, L)],
-    ["learn", "learn", "My lessons", () => has(L)], ["impact", "check", "Impact", () => true], ["insights", "insights", "Insights & AI cost", () => has(A, O, R)], ["storage", "coin", "Storage & AI", () => has(OWN, A, O, R, AU)], ["admin", "admin", "Administration", () => has(OWN, A, R, AU, C)]],
+    ["learn", "learn", "Learning", () => true], ["impact", "check", "Impact", () => true], ["insights", "insights", "Insights & AI cost", () => has(A, O, R)], ["storage", "coin", "Storage & AI", () => has(OWN, A, O, R, AU)], ["admin", "admin", "Administration", () => has(OWN, A, R, AU, C)]],
   workflowPicker: new Set(["capture", "knowledge", "learn", "insights", "progress"]),
 };
 const LIVING = {
   views: {
     home: [livingHomeView, livingClick], journey: [journeyView, livingClick], capture: [skillsView, livingClick, livingChange], session: [sessionView, sessionClick, sessionChange],
-    knowledge: [knowledgeView, knowledgeClick, knowledgeChange], learn: [apprenticeView, apprenticeClick], sharing: [sharingView, livingClick, livingChange], people: [adminView, adminClick],
+    knowledge: [knowledgeWithMaps, knowledgeClick, knowledgeChange], learn: [learnWithMaps, apprenticeClick], sharing: [sharingView, livingClick, livingChange], people: [adminView, adminClick],
     workflows: [workflowsView, workflowsClick, workflowsChange], impact: [impactView, () => {}], ...SHARED_VIEWS,
   },
   nav: [["home", "home", "Home", () => true], ["capture", "capture", "Capture a skill", () => has(E)], ["knowledge", "knowledge", "My knowledge", () => true],
@@ -62,7 +66,8 @@ function sampleBar() {
   return `<div class="sample-bar" role="note"><span><b>Sample space</b> · private to you · ${living ? "the kitchen camera is simulated (rendered frames) and suggested answers are scripted; you can edit or replace them" : "camera, screen and console feeds are simulated; suggested answers are scripted"} · AI processing is ${state.config?.ai === "vertex" ? "live" : "offline (fallbacks)"}</span>
     ${people.length ? `<label class="row small">View as <select id="sample-person" aria-label="View the sample as">${people.map((p) => `<option value="${p.id}" ${p.id === state.me.personId ? "selected" : ""}>${esc(p.display_name)} · ${esc(roleWord(p.roles))}</option>`).join("")}</select></label>` : ""}</div>`;
 }
-const roleWord = (roles = []) => (isLiving() ? (roles.includes(E) ? "teacher" : "learner") : roles.includes(A) ? "manager" : roles.includes(E) ? "expert" : roles.includes(L) ? "learner" : roles.includes(R) ? "reviewer" : "member");
+const roleWord = (roles = []) => (roles.includes(OWN) ? "owner · admin" : roles.includes(A) ? "admin" : roles.includes(C) ? "coordinator"
+  : isLiving() ? (roles.includes(E) ? "teacher" : "learner") : roles.includes(E) ? "expert" : roles.includes(L) ? "learner" : roles.includes(R) ? "reviewer" : "member");
 
 /** Spaces and the inbox (invitations + notifications). The count is announced by its accessible name. */
 function spaceLinks() {
@@ -165,6 +170,7 @@ document.addEventListener("click", async (e) => {
   if (e.target.closest('[data-act="logout"]')) return act("logout", async () => { await api("POST", "/api/auth/logout"); state.me = null; go("#/"); location.reload(); });
   if (!state.me) return authClick(e);
   if (await accessClick(e)) return;
+  if (await mapListsClick(e)) return;
   const del = e.target.closest('[data-act="delete-skill"]');
   if (del) {
     e.stopPropagation();
@@ -204,6 +210,7 @@ window.addEventListener("hashchange", async () => {
   if (r.name === "groups") invalidateGroups();
   if (r.name === "storage") invalidateStorage();
   if (r.name === "impact") invalidateImpact();
+  if (["learn", "knowledge", "home"].includes(r.name)) invalidateMapLists();
   if (["spaces", "inbox"].includes(r.name)) { invalidateSpaces(); invalidateAccess(); }
   if (state.me) { const before = state.unread; loadInbox().then(() => { if (state.unread !== before) render(); }).catch(() => {}); }
   if (["transfers", "home", "journey", "sharing", "knowledge", "progress"].includes(r.name)) { invalidateTransfers(); invalidateLiving(); invalidateProgress(); }

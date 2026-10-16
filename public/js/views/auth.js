@@ -168,7 +168,7 @@ export async function authClick(e) {
     document.querySelector('[data-act="login"]')?.focus(); announce(`Filled in the ${j.label} account. Press Sign in.`); return;
   }
   if (a === "login") return act("login", async () => { await api("POST", "/api/auth/login", { email: draft("li-email"), password: state.drafts["li-pw"] ?? "" }); state.drafts["li-pw"] = ""; await finishLogin(); location.reload(); });
-  if (a === "signup") return act("signup", async () => { await api("POST", "/api/auth/signup", { orgName: draft("su-org"), displayName: draft("su-name"), email: draft("su-email"), password: state.drafts["su-pw"] ?? "", experience: spaceType }); state.drafts["su-pw"] = ""; await finishLogin(spaceType === "living" ? "#/start/camera" : "#/start/screen"); location.reload(); });
+  if (a === "signup") return act("signup", async () => { await api("POST", "/api/auth/signup", { orgName: draft("su-org"), displayName: draft("su-name"), email: draft("su-email"), password: state.drafts["su-pw"] ?? "", experience: spaceType }); state.drafts["su-pw"] = ""; await finishLogin("#/"); location.reload(); });
   if (a === "accept-invite") return act("invite", async () => { await api("POST", "/api/auth/accept-invite", { token: t.dataset.token, displayName: draft("in-name"), password: state.drafts["in-pw"] ?? "" }); await finishLogin(); location.reload(); });
 }
 
@@ -192,6 +192,6 @@ export async function policiesClick(e) {
   const t = e.target.closest("[data-act]");
   if (t?.dataset.act === "accept-policies") {
     if (!document.getElementById("accept-all")?.checked) return void document.getElementById("accept-all")?.focus();
-    return act("accept", async () => { await api("POST", "/api/policies/accept", { ids: state.me.policies.pending }); state.me = await api("GET", "/api/auth/me"); go(state.me.org?.sampleKind === "living" ? "#/journey" : state.me.org?.sampleKind === "work" ? "#/transfers" : state.me.org?.experience === "living" ? "#/start/camera" : "#/start/screen"); location.reload(); });
+    return act("accept", async () => { await api("POST", "/api/policies/accept", { ids: state.me.policies.pending }); state.me = await api("GET", "/api/auth/me"); go(state.me.org?.sampleKind === "living" ? "#/journey" : state.me.org?.sampleKind === "work" ? "#/transfers" : "#/"); location.reload(); });
   }
 }

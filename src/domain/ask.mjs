@@ -10,7 +10,7 @@ import { normalizeLanguage, devanagariShare } from "../ai/language.mjs";
 import { visibleSql, viewerOf } from "./knowledge.mjs";
 
 const MESSAGES = {
-  en: { insufficient: "There isn't enough approved knowledge here to answer that. Please ask {expert}, who taught this, rather than guessing.", unavailable: "Agamya can't answer right now (the AI service is unavailable). Your question was not lost; please try again shortly or ask {expert}.", nothing: "Nothing has been approved and shared with you yet, so there is nothing to answer from." },
+  en: { insufficient: "There isn't enough approved knowledge here to answer that. Please ask {expert}, who taught this, rather than guessing.", unavailable: "Agamya can't answer right now (the AI service is unavailable). Your question was not lost; please try again shortly or ask {expert}.", nothing: "Nothing has been confirmed and shared with you yet. A Work Map or knowledge item can be used once its expert confirms it and shares it with you; you can ask for access from the Learning page." },
   mr: { insufficient: "याचे उत्तर देण्यासाठी इथे पुरेसे मान्य ज्ञान नाही. अंदाज करण्याऐवजी कृपया {expert} यांना विचारा, ज्यांनी हे शिकवले आहे.", unavailable: "Agamya सध्या उत्तर देऊ शकत नाही (AI सेवा उपलब्ध नाही). तुमचा प्रश्न हरवलेला नाही; थोड्या वेळाने पुन्हा प्रयत्न करा किंवा {expert} यांना विचारा.", nothing: "अजून तुमच्याशी कोणतेही मान्य ज्ञान शेअर केलेले नाही, त्यामुळे उत्तर देण्यासाठी आधार नाही." },
 };
 const msg = (lang, key, vars = {}) => (MESSAGES[lang] ?? MESSAGES.en)[key].replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
@@ -21,7 +21,7 @@ export function questionLanguage(question, preferred) {
   return devanagariShare(question) >= 0.3 ? "mr" : "en";
 }
 
-export function createAsk({ db }) {
+export function createAsk({ db, maps = () => null }) {
   const T = (ctx, fn) => db.tenant(ctx, fn);
 
   async function ask(ctx, { question, workflowId = null, language = null }) {
@@ -36,18 +36,21 @@ export function createAsk({ db }) {
                 JOIN knowledge_artifacts a ON a.judgment_id = j.id AND a.status = 'active' JOIN judgment_versions v ON v.judgment_id = j.id AND v.version = j.current_version
                 WHERE j.status = 'approved' AND ${visibleSql(viewer)} ${workflowId ? "AND j.workflow_id = $1" : ""} ORDER BY j.created_at DESC LIMIT 12`, workflowId ? [workflowId] : []);
     });
-    const expert = [...new Set(rows.map((r) => r.expert_name))].join(", ") || (lang === "mr" ? "तज्ज्ञ" : "the expert");
-    if (!rows.length) return { language: lang, answer: msg(lang, "nothing"), grounded: false, insufficient: true, citations: [], source: "rule" };
+    // Confirmed Work Maps the person may open are sources too (same access rule as the map pages).
+    const mapRows = maps() ? await maps().readableForAsk(ctx).catch(() => []) : [];
+    const expert = [...new Set([...rows, ...mapRows].map((r) => r.expert_name))].join(", ") || (lang === "mr" ? "तज्ज्ञ" : "the expert");
+    if (!rows.length && !mapRows.length) return { language: lang, answer: msg(lang, "nothing"), grounded: false, insufficient: true, citations: [], source: "rule" };
     const items = rows.map((r) => {
       const f = r.content.fields ?? {};
       const lines = CHAIN_FIELDS.filter((k) => f[k]?.value && f[k]?.status !== "INSUFFICIENT_EVIDENCE").map((k) => `${k} (${f[k].status}): ${f[k].value}${f[k].quote ? ` | expert's words: "${f[k].quote}"` : ""}`);
       const b = r.content.boundary;
       if (b?.boundaryCondition) lines.push(`boundary (${b.status}): ${b.boundaryCondition}${b.boundaryQuote ? ` | expert's words: "${b.boundaryQuote}"` : ""}`);
       return { judgmentId: r.id, title: r.title, expertName: r.expert_name, text: `${r.content.rule ?? ""}\n${lines.join("\n")}` };
-    });
+    }).concat(mapRows.map((m) => ({ judgmentId: null, mapSessionId: m.session_id, title: `Work Map: ${m.title}`, expertName: m.expert_name,
+      text: m.map.steps.map((st, i) => `Step ${i + 1}: ${st.title}. Do: ${st.action}. Decision: ${st.decision}.${st.reason?.text ? ` Why: ${st.reason.text}${st.reason.quote ? ` | expert's words: "${st.reason.quote}"` : ""}` : ""}${st.guardrails.map((g) => ` [${g.kind}] ${g.text}${g.quote ? ` | expert's words: "${g.quote}"` : ""}`).join("")}`).join("\n") })));
     // Derived-artifact cache: same normalised question, language and model over the SAME knowledge versions → reuse.
     // The source set is part of the key, so an answer is only reused by someone who can see exactly the same sources.
-    const sources = rows.map((r) => `${r.id}:${r.current_version}`).sort();
+    const sources = [...rows.map((r) => `${r.id}:${r.current_version}`), ...mapRows.map((m) => `wm:${m.id}:${m.version}`)].sort();
     const keyHash = sha256(JSON.stringify(["ask", text.normalize("NFC").toLowerCase().replace(/\s+/g, " "), lang, MODEL(), sources]));
     const [cached] = await T(ctx, (q) => q("UPDATE derived_cache SET hits = hits + 1, last_hit_at = now() WHERE org_id = $1 AND key_hash = $2 RETURNING payload", [ctx.orgId, keyHash]));
     let res;

@@ -15,6 +15,7 @@ export function knowledgeView(r) {
   const living = isLiving();
   if (!living && !has("ORG_ADMIN", "WORKFLOW_OWNER", "REVIEWER", "EXPERT")) return `<div class="card pad">${icon("lock", 16)} The knowledge library is for experts, workflow owners and reviewers. Learners practise through lessons, so answers are not shown up front.</div>`;
   const w = workflow();
+  if (!living && !w) return `<div class="page-head"><div><h1>Knowledge library</h1></div></div><div class="card pad empty">${orb("observing", 72)}<p>Nothing captured in this space yet. Start a session from <a href="#/">Home</a>; confirmed Work Maps appear there.</p></div>`;
   const key = living ? "mine" : w?.id;
   if (!list || list.key !== key) {
     (living ? api("GET", "/api/knowledge/mine").then((m) => [...m.mine, ...m.sharedWithMe]) : api("GET", `/api/workflows/${w.id}/knowledge`))

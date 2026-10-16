@@ -124,6 +124,7 @@ export function mapView(r) {
         <div class="row wrap"><button class="primary" data-act="map-debrief">${icon(voiceReady() ? "mic" : "text", 15)} Start the debrief</button>
           ${m.steps.length ? `<button data-act="map-confirm">Yes, that's how it works</button>` : ""}</div>
         ${m.unclear.length ? `<details><summary>What Moti is unsure about</summary><ul>${m.unclear.map((u) => `<li>${esc(u.question)} <span class="muted small">${esc(u.why)}</span></li>`).join("")}</ul></details>` : ""}`}</div>` : ""}
+    ${m.canShare ? sharePanel(m) : ""}
     ${m.steps?.length ? listenPanel(m) : ""}
     ${m.status === "confirmed" && m.mine ? agentsPanel(m) : ""}
     ${m.steps.length ? `<ol class="map-steps">${m.steps.map((s, i) => step(s, i, m.steps.length)).join("")}</ol>` : `<p class="callout">No steps yet. ${state.config?.ai === "vertex" ? "Moti could not build them from this session; the debrief adds what is missing." : "AI is offline here, so steps cannot be built. Your words are saved and the map is built when AI is available."}</p>`}
@@ -141,6 +142,35 @@ function step(s, i, n) {
       <dt>Reason</dt><dd>${s.reason?.text ? `${esc(s.reason.text)}${s.reason.quote ? `<blockquote class="quote">“${esc(s.reason.quote)}”${s.reason.quoteEn && s.reason.quoteEn !== s.reason.quote ? `<span class="small muted"> · English: ${esc(s.reason.quoteEn)}</span>` : ""}</blockquote>` : ` <span class="tag">AI-inferred, not said by the expert</span>`}` : `<span class="muted">Not explained</span>`}</dd>
       <dt>Guardrails</dt><dd>${s.guardrails.length ? `<ul class="plain">${s.guardrails.map((g) => `<li><b>${KIND[g.kind] ?? g.kind}:</b> ${esc(g.text)}${g.quote ? ` <span class="small muted">“${esc(g.quote)}”</span>` : ` <span class="tag">AI-inferred</span>`}</li>`).join("")}</ul>` : `<span class="muted">None recorded</span>`}</dd></dl>
   </div></li>`;
+}
+
+// ---------------------------------------------------------------- sharing: who should learn from this?
+let shareData = null, shareFor = null, justConfirmed = null, shareOpen = false;
+function sharePanel(m) {
+  if (shareFor !== m.sessionId) {
+    shareFor = m.sessionId; shareData = null; shareOpen = false;
+    Promise.all([api("GET", "/api/groups").catch(() => ({ groups: [] })), api("GET", "/api/people").catch(() => [])])
+      .then(([g, p]) => { shareData = { groups: g.groups ?? [], people: p.filter((x) => x.has_login) }; render(); });
+  }
+  const s = m.sharing ?? { visibility: "private", people: [], groups: [], chosen: false };
+  const space = state.me?.org?.name ?? "this space";
+  const who = s.visibility === "organization" ? `everyone in ${space}` : s.visibility === "named" ? [...s.groups.map((g) => `group ${g.name}`), ...s.people.map((p) => p.name)].join(", ") || "chosen people" : "only you (and space admins)";
+  const asking = justConfirmed === m.sessionId || shareOpen;
+  const pickedP = new Set(s.people.map((x) => x.id)), pickedG = new Set(s.groups.map((x) => x.id));
+  return `<section class="share card pad stack" aria-labelledby="sh-h">
+    <div class="row between wrap"><h2 id="sh-h" class="h3">${justConfirmed === m.sessionId ? "Confirmed. Who should learn from this?" : "Who can learn from this"}</h2>
+      ${asking ? "" : `<button class="sm" data-act="share-open">Share</button>`}</div>
+    <p class="small">${m.status === "confirmed" ? `Visible to <b>${esc(who)}</b>.` : `Once you confirm it, it will be visible to <b>${esc(who)}</b>.`} <span class="muted">The expert, and the space's admins and coordinators, can change this at any time.</span></p>
+    ${asking ? (!shareData ? `<span class="thinking small">Loading people and groups</span>` : `<fieldset class="stack"><legend class="sr-only">Who can see this Work Map</legend>
+      <label class="check"><input type="radio" name="sh-vis" value="organization" ${s.visibility === "organization" ? "checked" : ""}> Everyone in ${esc(space)}</label>
+      <label class="check"><input type="radio" name="sh-vis" value="named" ${s.visibility === "named" ? "checked" : ""}> Chosen groups and people</label>
+      <div class="sh-pick stack">
+        ${shareData.groups.length ? `<div class="small"><b>Groups</b><div class="row wrap">${shareData.groups.map((g) => `<label class="check chip-check"><input type="checkbox" data-sh-group value="${g.id}" ${pickedG.has(g.id) ? "checked" : ""}> ${esc(g.name)}</label>`).join("")}</div></div>` : `<p class="small muted">No groups yet. <a href="#/groups">Create one</a>.</p>`}
+        ${shareData.people.filter((p) => p.display_name !== m.expertName).length ? `<div class="small"><b>People</b><div class="row wrap">${shareData.people.filter((p) => p.display_name !== m.expertName).map((p) => `<label class="check chip-check"><input type="checkbox" data-sh-person value="${p.id}" ${pickedP.has(p.id) ? "checked" : ""}> ${esc(p.display_name)}</label>`).join("")}</div></div>` : `<p class="small muted">Nobody else is in this space yet. Invite people from People.</p>`}
+      </div>
+      <label class="check"><input type="radio" name="sh-vis" value="private" ${s.visibility === "private" ? "checked" : ""}> Only me (and space admins)</label></fieldset>
+      <div class="row"><button class="primary sm" data-act="share-save">Save</button>${justConfirmed === m.sessionId ? `<button class="ghost sm" data-act="share-later">Decide later</button>` : `<button class="ghost sm" data-act="share-later">Cancel</button>`}</div>`) : ""}
+  </section>`;
 }
 
 // ---------------------------------------------------------------- listen (narration in the learner's language)
@@ -257,6 +287,18 @@ export async function nowClick(e) {
     return true;
   }
   if (a === "map-debrief-done") { live?.finish(); return true; }
+  if (a === "share-open") { shareOpen = true; render(); document.querySelector('input[name="sh-vis"]:checked, input[name="sh-vis"]')?.focus(); return true; }
+  if (a === "share-later") { shareOpen = false; justConfirmed = null; render(); return true; }
+  if (a === "share-save") {
+    const visibility = document.querySelector('input[name="sh-vis"]:checked')?.value;
+    if (!visibility) { toast("Choose who can see it.", true); return true; }
+    const people = [...document.querySelectorAll("[data-sh-person]:checked")].map((x) => x.value), groups = [...document.querySelectorAll("[data-sh-group]:checked")].map((x) => x.value);
+    try {
+      await api("POST", `/api/maps/${view.map.sessionId}/sharing`, { visibility, people, groups });
+      shareOpen = false; justConfirmed = null; announce("Sharing saved."); toast("Sharing saved."); await loadMap(view.map.sessionId);
+    } catch (err) { toast(err.message, true); }
+    return true;
+  }
   if (a === "listen") {
     const language = document.getElementById("ls-lang")?.value ?? "en"; listenLang = language;
     hearing = true; render(); announce("Preparing the spoken lesson.");
@@ -283,7 +325,7 @@ export async function nowClick(e) {
     render(); return true;
   }
   if (a === "map-confirm") {
-    try { await api("POST", `/api/maps/${view.map.sessionId}/confirm`, {}); announce("Work Map confirmed."); await loadMap(view.map.sessionId); }
+    try { await api("POST", `/api/maps/${view.map.sessionId}/confirm`, {}); justConfirmed = view.map.sessionId; announce("Work Map confirmed. Choose who should learn from it."); await loadMap(view.map.sessionId); document.getElementById("sh-h")?.scrollIntoView({ block: "center" }); }
     catch (err) { toast(err.message, true); }
     return true;
   }

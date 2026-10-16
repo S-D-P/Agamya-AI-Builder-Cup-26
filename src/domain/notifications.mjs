@@ -27,12 +27,17 @@ export function createNotifications({ db }) {
                                    WHERE lower(i.email) = lower($1) AND i.status = 'pending' AND i.expires_at > now() AND o.deleted_at IS NULL
                                      AND NOT EXISTS (SELECT 1 FROM memberships m WHERE m.org_id = i.org_id AND m.user_id = $2 AND m.status = 'active')
                                    ORDER BY i.created_at DESC`, [ctx.email, ctx.userId]);
+      // Space separation: only this space's notifications are listed. Other spaces are summarised as an unread count.
       const items = await q(`SELECT n.id, n.org_id, o.name AS space_name, n.kind, n.title, n.body, n.link, n.read_at, n.created_at
                              FROM notifications n LEFT JOIN organizations o ON o.id = n.org_id
-                             WHERE n.user_id = $1 ORDER BY n.created_at DESC LIMIT 100`, [ctx.userId]);
+                             WHERE n.user_id = $1 AND (n.org_id = $2 OR n.org_id IS NULL) ORDER BY n.created_at DESC LIMIT 100`, [ctx.userId, ctx.orgId ?? null]);
+      const elsewhere = await q(`SELECT n.org_id, o.name AS space_name, count(*)::int AS unread FROM notifications n JOIN organizations o ON o.id = n.org_id
+                                 JOIN memberships m ON m.org_id = n.org_id AND m.user_id = n.user_id AND m.status = 'active'
+                                 WHERE n.user_id = $1 AND n.read_at IS NULL AND n.org_id IS DISTINCT FROM $2 GROUP BY n.org_id, o.name ORDER BY o.name`, [ctx.userId, ctx.orgId ?? null]);
       return {
         invitations: invitations.map((i) => ({ id: i.id, spaceId: i.org_id, spaceName: i.space_name, kind: i.experience === "living" ? "personal" : "enterprise", roles: i.roles, invitedBy: i.invited_by, createdAt: i.created_at, expiresAt: i.expires_at })),
         notifications: items.map((n) => ({ id: n.id, spaceId: n.org_id, spaceName: n.space_name, kind: n.kind, title: n.title, body: n.body, link: n.link, read: Boolean(n.read_at), createdAt: n.created_at })),
+        otherSpaces: elsewhere.map((e) => ({ spaceId: e.org_id, spaceName: e.space_name, unread: e.unread })),
         unread: items.filter((n) => !n.read_at).length + invitations.length,
       };
     });
@@ -41,7 +46,7 @@ export function createNotifications({ db }) {
   async function markRead(ctx, { ids = null, all = false }) {
     if (!ctx?.userId) throw httpError(401, "sign in required");
     await db.system((q) => all
-      ? q("UPDATE notifications SET read_at = now() WHERE user_id = $1 AND read_at IS NULL", [ctx.userId])
+      ? q("UPDATE notifications SET read_at = now() WHERE user_id = $1 AND read_at IS NULL AND (org_id = $2 OR org_id IS NULL)", [ctx.userId, ctx.orgId ?? null])
       : q("UPDATE notifications SET read_at = now() WHERE user_id = $1 AND id = ANY($2::uuid[]) AND read_at IS NULL", [ctx.userId, ids ?? []]));
     return { ok: true };
   }
