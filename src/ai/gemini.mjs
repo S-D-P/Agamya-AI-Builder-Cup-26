@@ -194,7 +194,7 @@ export async function embed(texts) {
   }
 }
 
-export async function tts(text, voiceName = process.env.TTS_VOICE || "Puck") {
+export async function tts(text, voiceName = process.env.TTS_VOICE || "Puck", { timeoutMs = TIMEOUT_MS(), style = "Say in a warm, curious, gentle voice:" } = {}) {
   const entry = { op: "tts", model: TTS_MODEL(), status: "error", inputTypes: ["TEXT"], mediaItems: 0, contextChars: text.length, promptTokens: 0, outputTokens: 0, thoughtTokens: 0, byModality: {}, latencyMs: 0 };
   if (!adapter) { entry.errorCategory = "ai_unavailable"; await record(entry); return null; }
   const orgId = aiContext().orgId;
@@ -202,9 +202,9 @@ export async function tts(text, voiceName = process.env.TTS_VOICE || "Puck") {
   const started = Date.now();
   try {
     const r = await withTimeout(adapter.generate({
-      model: TTS_MODEL(), contents: `Say in a warm, curious, gentle voice: ${text}`,
+      model: TTS_MODEL(), contents: `${style} ${text}`,
       config: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } } },
-    }), TIMEOUT_MS());
+    }), timeoutMs);
     Object.assign(entry, usageOf(r));
     const part = r.candidates?.[0]?.content?.parts?.find((p) => p.inlineData);
     if (!part) throw new Error("no audio returned");

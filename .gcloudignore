@@ -8,3 +8,4 @@ data/*
 !data/benchmark.json
 !data/adversarial.json
 *.log
+agents/

@@ -2,6 +2,7 @@
 // a family / community space gets the living shell (simple top navigation, skills, my knowledge, sharing).
 // All authorization is enforced by the server; navigation only reflects it.
 import { accessClick, invalidateAccess } from "./views/access.js";
+import { impactView, invalidateImpact } from "./views/impact.js";
 import { state, api, esc, onRender, render, route, go, has, setWorkflow, workflow, act, isLiving, isSample, store, toast } from "./core.js";
 import { icon } from "./icons.js";
 import { authView, authClick, policiesView, policiesClick, brand, loadAuthConfig } from "./views/auth.js";
@@ -35,21 +36,21 @@ const WORK = {
     home: [commandView, commandClick], transfers: [transfersView, transfersClick, transfersChange], workflows: [workflowsView, workflowsClick, workflowsChange],
     capture: [captureView, sessionClick, sessionChange], session: [sessionView, sessionClick, sessionChange], knowledge: [knowledgeView, knowledgeClick, knowledgeChange],
     progress: [progressView, () => {}], learn: [apprenticeView, apprenticeClick], insights: [insightsView, insightsClick], admin: [adminView, adminClick],
-    radar: [radarView, () => {}], storage: [storageView, () => {}], ...SHARED_VIEWS,
+    radar: [radarView, () => {}], storage: [storageView, () => {}], impact: [impactView, () => {}], ...SHARED_VIEWS,
   },
   nav: [["home", "home", "Home", () => true], ["missions", "flows", "KT missions", () => true], ["radar", "alert", "Knowledge at risk", () => has(OWN, A, C, O, R, AU)], ["transfers", "users", "Knowledge transfers", () => true], ["workflows", "flows", "Workflows", () => true],
     ["knowledge", "knowledge", "Knowledge library", () => has(E, O, R, A)], ["groups", "users", "Groups", () => true], ["progress", "check", "Learner progress", () => has(A, O, R, L)],
-    ["learn", "learn", "My lessons", () => has(L)], ["insights", "insights", "Insights & AI cost", () => has(A, O, R)], ["storage", "coin", "Storage & AI", () => has(OWN, A, O, R, AU)], ["admin", "admin", "Administration", () => has(OWN, A, R, AU, C)]],
+    ["learn", "learn", "My lessons", () => has(L)], ["impact", "check", "Impact", () => true], ["insights", "insights", "Insights & AI cost", () => has(A, O, R)], ["storage", "coin", "Storage & AI", () => has(OWN, A, O, R, AU)], ["admin", "admin", "Administration", () => has(OWN, A, R, AU, C)]],
   workflowPicker: new Set(["capture", "knowledge", "learn", "insights", "progress"]),
 };
 const LIVING = {
   views: {
     home: [livingHomeView, livingClick], journey: [journeyView, livingClick], capture: [skillsView, livingClick, livingChange], session: [sessionView, sessionClick, sessionChange],
     knowledge: [knowledgeView, knowledgeClick, knowledgeChange], learn: [apprenticeView, apprenticeClick], sharing: [sharingView, livingClick, livingChange], people: [adminView, adminClick],
-    workflows: [workflowsView, workflowsClick, workflowsChange], ...SHARED_VIEWS,
+    workflows: [workflowsView, workflowsClick, workflowsChange], impact: [impactView, () => {}], ...SHARED_VIEWS,
   },
   nav: [["home", "home", "Home", () => true], ["capture", "capture", "Capture a skill", () => has(E)], ["knowledge", "knowledge", "My knowledge", () => true],
-    ["learn", "learn", "Learning", () => true], ["groups", "users", "Groups", () => true], ["sharing", "share", "Sharing & permissions", () => has(E)], ["missions", "flows", "Missions", () => has(A, C)], ["people", "users", "People", () => has(A)]],
+    ["learn", "learn", "Learning", () => true], ["groups", "users", "Groups", () => true], ["sharing", "share", "Sharing & permissions", () => has(E)], ["impact", "check", "Impact", () => true], ["missions", "flows", "Missions", () => has(A, C)], ["people", "users", "People", () => has(A)]],
 };
 const exp = () => (isLiving() ? LIVING : WORK);
 
@@ -202,6 +203,7 @@ window.addEventListener("hashchange", async () => {
   if (["missions", "home"].includes(r.name)) invalidateMissions();
   if (r.name === "groups") invalidateGroups();
   if (r.name === "storage") invalidateStorage();
+  if (r.name === "impact") invalidateImpact();
   if (["spaces", "inbox"].includes(r.name)) { invalidateSpaces(); invalidateAccess(); }
   if (state.me) { const before = state.unread; loadInbox().then(() => { if (state.unread !== before) render(); }).catch(() => {}); }
   if (["transfers", "home", "journey", "sharing", "knowledge", "progress"].includes(r.name)) { invalidateTransfers(); invalidateLiving(); invalidateProgress(); }

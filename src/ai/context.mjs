@@ -41,6 +41,8 @@ export const POLICIES = {
  */
 export const OPERATION_PROFILES = {
   buildWorkMap: { levels: ["L1 session events (text)", "L2 expert speech + dialogue", "previous map"], pixels: "none" },
+  narrateWorkMap: { levels: ["confirmed map (text)"], pixels: "none" },
+  checkAction: { levels: ["confirmed map (text)", "proposed action + facts"], pixels: "none" },
   judgeTutorTurn: { levels: ["confirmed map (text)", "last turns"], pixels: "none" },
   understandWorkflow: { levels: ["EXTERNAL_DOCUMENT"], pixels: "none" },
   interpretObservation: { levels: ["L0 frame (LOW, escalate to MEDIUM on low confidence)", "L1 last 4 events"], pixels: "one frame" },

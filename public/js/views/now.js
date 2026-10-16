@@ -124,6 +124,8 @@ export function mapView(r) {
         <div class="row wrap"><button class="primary" data-act="map-debrief">${icon(voiceReady() ? "mic" : "text", 15)} Start the debrief</button>
           ${m.steps.length ? `<button data-act="map-confirm">Yes, that's how it works</button>` : ""}</div>
         ${m.unclear.length ? `<details><summary>What Moti is unsure about</summary><ul>${m.unclear.map((u) => `<li>${esc(u.question)} <span class="muted small">${esc(u.why)}</span></li>`).join("")}</ul></details>` : ""}`}</div>` : ""}
+    ${m.steps?.length ? listenPanel(m) : ""}
+    ${m.status === "confirmed" && m.mine ? agentsPanel(m) : ""}
     ${m.steps.length ? `<ol class="map-steps">${m.steps.map((s, i) => step(s, i, m.steps.length)).join("")}</ol>` : `<p class="callout">No steps yet. ${state.config?.ai === "vertex" ? "Moti could not build them from this session; the debrief adds what is missing." : "AI is offline here, so steps cannot be built. Your words are saved and the map is built when AI is available."}</p>`}
   </section>`, { dark: false });
 }
@@ -139,6 +141,50 @@ function step(s, i, n) {
       <dt>Reason</dt><dd>${s.reason?.text ? `${esc(s.reason.text)}${s.reason.quote ? `<blockquote class="quote">“${esc(s.reason.quote)}”${s.reason.quoteEn && s.reason.quoteEn !== s.reason.quote ? `<span class="small muted"> · English: ${esc(s.reason.quoteEn)}</span>` : ""}</blockquote>` : ` <span class="tag">AI-inferred, not said by the expert</span>`}` : `<span class="muted">Not explained</span>`}</dd>
       <dt>Guardrails</dt><dd>${s.guardrails.length ? `<ul class="plain">${s.guardrails.map((g) => `<li><b>${KIND[g.kind] ?? g.kind}:</b> ${esc(g.text)}${g.quote ? ` <span class="small muted">“${esc(g.quote)}”</span>` : ` <span class="tag">AI-inferred</span>`}</li>`).join("")}</ul>` : `<span class="muted">None recorded</span>`}</dd></dl>
   </div></li>`;
+}
+
+// ---------------------------------------------------------------- listen (narration in the learner's language)
+const LISTEN = [["en", "English"], ["hi", "हिन्दी (Hindi)"], ["mr", "मराठी (Marathi)"], ["kn", "ಕನ್ನಡ (Kannada)"], ["bn", "বাংলা (Bengali)"], ["ta", "தமிழ் (Tamil)"], ["te", "తెలుగు (Telugu)"],
+  ["gu", "ગુજરાતી (Gujarati)"], ["ml", "മലയാളം (Malayalam)"], ["pa", "ਪੰਜਾਬੀ (Punjabi)"], ["ja", "日本語 (Japanese)"], ["ko", "한국어 (Korean)"], ["es", "Español"], ["fr", "Français"], ["de", "Deutsch"]];
+let heard = null, hearing = false, listenLang = null;
+function listenPanel(m) {
+  const lang = listenLang ?? (state.me?.user?.language || "en");
+  return `<section class="listen card pad stack" aria-labelledby="ls-h"><h2 id="ls-h" class="h3">Listen to this Work Map</h2>
+    <p class="small muted">A short spoken lesson of ${esc(m.expertName)}'s process, in your language. ${esc(m.expertName)}'s own words are kept as they said them.</p>
+    <div class="row wrap"><label class="sr-only" for="ls-lang">Language</label><select id="ls-lang" style="width:auto">${LISTEN.map(([c, l]) => `<option value="${c}" lang="${c}" ${c === lang ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>
+      <button class="sm" data-act="listen" ${hearing ? "disabled" : ""}>${hearing ? "Preparing (about 30 seconds the first time)" : "Listen"}</button></div>
+    ${heard && heard.sessionId === m.sessionId ? `${heard.audioUrl ? `<audio controls src="${esc(heard.audioUrl)}" preload="auto" style="width:100%"></audio>` : `<p class="small muted">Audio is unavailable right now; the transcript is below.</p>`}
+      ${heard.reviewed ? "" : `<p class="small"><span class="tag">${esc(heard.languageName)}: not yet reviewed by a native speaker</span></p>`}
+      <details open><summary>Transcript</summary><p lang="${esc(heard.language)}" style="white-space:pre-wrap">${esc(heard.script)}</p></details>` : ""}
+  </section>`;
+}
+
+// ---------------------------------------------------------------- guardrail agents (confirmed maps, owner)
+let agents = null, agentsFor = null, newKey = null, tryResult = null;
+const VERDICT = { STOP: ["Stop", "red"], ASK: ["Ask a person", "amber"], PROCEED: ["Proceed", "green"], NOT_COVERED: ["Not covered: ask a person", ""], UNAVAILABLE: ["Check unavailable: ask a person", ""] };
+const refreshAgents = (id) => api("GET", `/api/maps/${id}/agents`).then((x) => { agents = x; render(); }).catch(() => { agents = agents ?? { keys: [], checks: [], endpoints: {} }; render(); });
+function agentsPanel(m) {
+  // New map: start clean. Same map: keep the latest answer and key on screen while the lists refresh.
+  if (agentsFor !== m.sessionId) { agentsFor = m.sessionId; agents = null; newKey = null; tryResult = null; refreshAgents(m.sessionId); }
+  const v = tryResult && VERDICT[tryResult.verdict];
+  return `<section class="agents card pad stack" aria-labelledby="ag-h">
+    <h2 id="ag-h" class="h3">Use this Work Map with AI agents</h2>
+    <p class="small muted">Before an AI agent or a new colleague acts, they ask: would ${esc(m.expertName)} stop here? The answer comes from this confirmed map, with ${esc(m.expertName)}'s own words.</p>
+    <div class="row wrap"><label class="sr-only" for="ag-try">Describe an action to check</label><input id="ag-try" data-draft="ag-try" placeholder="Post invoice INV-204 for ₹72,000 from a new supplier" style="flex:1;min-width:240px">
+      <button class="sm" data-act="agent-try">Would ${esc(m.expertName)} stop here?</button></div>
+    ${tryResult ? `<div class="verdict" role="status"><span class="tag ${v?.[1] ?? ""}">${esc(v?.[0] ?? tryResult.verdict)}</span>${tryResult.stepTitle ? ` <span class="small muted">Step: ${esc(tryResult.stepTitle)}</span>` : ""}
+      <p>${esc(tryResult.explanation ?? "")}</p>${tryResult.guardrail?.expertQuote ? `<blockquote class="quote">“${esc(tryResult.guardrail.expertQuote)}” <span class="small muted">· ${esc(m.expertName)}</span></blockquote>` : tryResult.guardrail ? `<p class="small"><span class="tag">AI-inferred guardrail</span> ${esc(tryResult.guardrail.text)}</p>` : ""}</div>` : ""}
+    <details ${newKey ? "open" : ""}><summary>Connect an agent (MCP, REST, Google ADK)</summary>
+      <div class="stack" style="margin-top:10px">
+        <div class="row wrap"><label class="sr-only" for="ag-label">Agent name</label><input id="ag-label" data-draft="ag-label" placeholder="Accounts-payable assistant" style="flex:1;min-width:200px"><button class="sm primary" data-act="agent-key">Create a key</button></div>
+        ${newKey ? `<div class="callout small stack" role="status"><b>Copy this key now: it is shown only once.</b><code style="word-break:break-all">${esc(newKey.key)}</code>
+          <div><b>MCP</b> (Claude, Gemini CLI, any MCP client): <code>${esc(newKey.endpoints.mcp)}</code> with header <code>Authorization: Bearer &lt;key&gt;</code></div>
+          <div><b>REST</b>: <code style="word-break:break-all">curl -X POST ${esc(newKey.endpoints.check)} -H "Authorization: Bearer &lt;key&gt;" -H "content-type: application/json" -d '{"action":"Post the 72,000 invoice"}'</code></div>
+          <div><b>Google ADK agent</b> (Vertex AI Agent Engine): set <code>AGAMYA_URL</code> and <code>AGAMYA_AGENT_KEY</code>, see <code>agents/guardrail_agent</code>.</div></div>` : ""}
+        ${agents?.keys?.length ? `<ul class="plain small">${agents.keys.map((k) => `<li>${esc(k.label)} · …${esc(k.hint)} · ${k.revoked ? "revoked" : k.lastUsedAt ? `last used ${ago(k.lastUsedAt)}` : "not used yet"} ${k.revoked ? "" : `<button class="ghost sm" data-act="agent-revoke" data-id="${k.id}">Revoke</button>`}</li>`).join("")}</ul>` : ""}
+      </div></details>
+    ${agents?.checks?.length ? `<details><summary>Recent checks (${agents.checks.length})</summary><ul class="plain small">${agents.checks.map((c) => `<li><span class="tag ${VERDICT[c.verdict]?.[1] ?? ""}">${esc(VERDICT[c.verdict]?.[0] ?? c.verdict)}</span> ${esc(c.action)} <span class="muted">· ${esc(c.via)} · ${ago(c.at)}</span></li>`).join("")}</ul></details>` : ""}
+  </section>`;
 }
 
 async function loadMap(id) {
@@ -211,6 +257,31 @@ export async function nowClick(e) {
     return true;
   }
   if (a === "map-debrief-done") { live?.finish(); return true; }
+  if (a === "listen") {
+    const language = document.getElementById("ls-lang")?.value ?? "en"; listenLang = language;
+    hearing = true; render(); announce("Preparing the spoken lesson.");
+    try { heard = { ...(await api("GET", `/api/maps/${view.map.sessionId}/listen?language=${encodeURIComponent(language)}`)), sessionId: view.map.sessionId }; announce("Ready. Press play on the audio player, or read the transcript."); }
+    catch (err) { toast(err.message, true); }
+    hearing = false; render(); return true;
+  }
+  if (a === "agent-try") {
+    const action = (state.drafts["ag-try"] ?? "").trim();
+    if (!action) { document.getElementById("ag-try")?.focus(); return true; }
+    try { el.disabled = true; tryResult = await api("POST", `/api/maps/${view.map.sessionId}/check`, { action }); announce(`${VERDICT[tryResult.verdict]?.[0] ?? tryResult.verdict}. ${tryResult.explanation}`); refreshAgents(view.map.sessionId); }
+    catch (err) { toast(err.message, true); }
+    render(); return true;
+  }
+  if (a === "agent-key") {
+    try { newKey = await api("POST", `/api/maps/${view.map.sessionId}/agent-keys`, { label: state.drafts["ag-label"] ?? "" }); state.drafts["ag-label"] = ""; refreshAgents(view.map.sessionId); announce("Key created. Copy it now: it is shown only once."); }
+    catch (err) { toast(err.message, true); }
+    render(); return true;
+  }
+  if (a === "agent-revoke") {
+    if (!confirm("Revoke this key? Agents using it stop working at once.")) return true;
+    try { await api("POST", `/api/maps/${view.map.sessionId}/agent-keys/${el.dataset.id}/revoke`, {}); newKey = null; refreshAgents(view.map.sessionId); toast("Key revoked."); }
+    catch (err) { toast(err.message, true); }
+    render(); return true;
+  }
   if (a === "map-confirm") {
     try { await api("POST", `/api/maps/${view.map.sessionId}/confirm`, {}); announce("Work Map confirmed."); await loadMap(view.map.sessionId); }
     catch (err) { toast(err.message, true); }

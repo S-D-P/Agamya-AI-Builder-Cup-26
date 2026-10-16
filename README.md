@@ -38,6 +38,17 @@ Observe → Notice judgment → Ask why → Expert approves → Find the boundar
 - **Work Map.** Steps a newcomer can follow. Each has its screen moment, the decision, the reason **in the expert's own words** (verified verbatim, otherwise labelled AI-inferred), guardrails, and what is still unclear.
 - **Debrief and teach-back.** Moti asks what is unclear, explains the process back, and the expert confirms. Only confirmed maps can be practised or exported for AI agents.
 - **Tutor.** A new hire shares their screen. Moti teaches in their language (verified live in Hindi and Kannada), stops a wrong decision ("Asha would stop here. Why do you think?") and replays the expert's moment.
+- **Guardrail agents** ([AGENTS](docs/AGENTS.md)):
+  - A confirmed Work Map answers AI agents asking "would the expert stop here?", over REST and **MCP**, with per-map revocable keys.
+  - The answer is STOP, ASK, PROCEED or NOT_COVERED, with the expert's own words taken from the map.
+  - A **Google ADK** agent (`agents/guardrail_agent`), deployed on **Vertex AI Agent Engine**, uses it before every action.
+- **Impact:** what Agamya did in a space, counted from its records, never estimated. It covers:
+  - expert minutes and questions per 10 minutes;
+  - maps confirmed and the share in the expert's own words;
+  - wrong decisions stopped in practice, and whether learners need fewer stops on repeat;
+  - agent checks handed back to a person;
+  - languages used, and AI cost per confirmed map.
+- **Listen:** a confirmed Work Map as a short spoken lesson in 15 languages (Gemini narration + Gemini TTS), with a transcript. Quotes are kept word for word. Languages not yet reviewed by a native speaker are labelled.
 - Monochrome app; colour only in the landing animation (an original, code-drawn painted stage: Kathak in Jaipur, weaving in Phulia, a swordsmith in Seki, a vocal coach in Seoul, debugging in Bengaluru, an investment call in Singapore, each melting into the next).
 - Details, measured results and limits: [LIVE_MOTI](docs/LIVE_MOTI.md).
 - **Evaluated on public data** ([EVALUATION](docs/EVALUATION.md)):

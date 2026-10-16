@@ -633,3 +633,13 @@ fieldset > legend { padding: 0; margin-bottom: 8px; }
 .back-fab[hidden] { display: none; }
 .back-fab:hover { border-color: var(--ink); }
 @media print { .back-fab { display: none; } }
+.agents { margin: 20px 0; }
+.agents .verdict { border-left: 3px solid var(--ink); padding: 6px 12px; display: grid; gap: 6px; }
+.agents code { font-family: var(--mono); font-size: 12px; background: var(--paper-2); padding: 2px 4px; border-radius: 4px; }
+.impact-sec { margin-top: 22px; }
+.impact-sec h2 { margin-bottom: 10px; }
+.impact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 12px; }
+.impact-tile { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; display: grid; gap: 4px; align-content: start; }
+.impact-n { font-family: var(--display); font-size: 30px; line-height: 1.1; font-weight: 600; }
+.impact-n .muted { font-family: var(--font); font-size: 13px; font-weight: 500; }
+.impact-l { font-size: 13px; font-weight: 600; color: var(--ink-2); }

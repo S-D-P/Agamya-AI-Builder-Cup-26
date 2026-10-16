@@ -12,6 +12,8 @@ export function fakeModel() {
     const p = schema?.properties ?? {};
     if (p.steps && p.unclear) return "buildWorkMap";
     if (p.intervened && p.finished) return "judgeTutorTurn";
+    if (p.verdict && p.guardrailIndex) return "checkAction";
+    if (p.script && Object.keys(p).length === 1) return "narrateWorkMap";
     if (p.candidates && p.actionDiffersFromProcedure) return "detectJudgment";
     if (p.results) return "assessRequirements";
     if (p.gaps) return "detectGaps";
@@ -76,6 +78,15 @@ export function fakeModel() {
       : id === "r2" ? { requirementId: id, status: "satisfied", itemId: "k1", field: "reason", quote: "a sentence nobody said", explanation: "Claimed." }
       : { requirementId: id, status: "unresolved", explanation: "Not covered yet." }) }),
     tutor: () => ({ message: "What do you notice about the value here?" }),
+    narrateWorkMap: ({ prompt }) => ({ script: `First, check the amount. Asha says: "anything over fifty thousand I hold". ${/Hindi/.test(prompt) ? "(hi)" : ""}` }),
+    // Over the limit → STOP at s1's guardrail; "invent" → a STOP with no real guardrail (must be downgraded); weather → not covered.
+    checkAction: ({ prompt }) => {
+      const a = block(prompt, "PROPOSED ACTION");
+      if (/weather/i.test(a)) return { verdict: "NOT_COVERED", stepId: "", guardrailIndex: -1, explanation: "The map does not cover this." };
+      if (/invent/i.test(a)) return { verdict: "STOP", stepId: "s2", guardrailIndex: 5, explanation: "Made up." };
+      if (/75,000|over the limit/i.test(a)) return { verdict: "STOP", stepId: "s1", guardrailIndex: 0, explanation: "Above the limit the controller decides." };
+      return { verdict: "PROCEED", stepId: "s2", guardrailIndex: -1, explanation: "Routine posting." };
+    },
     // The tutor's words decide: "would stop here" is a stop at s1 (with the replay); "Practise" ends the session.
     judgeTutorTurn: ({ prompt }) => {
       const moti = block(prompt, "THE TUTOR (MOTI) JUST SAID");

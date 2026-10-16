@@ -11,12 +11,14 @@ import { audit } from "../platform/audit.mjs";
 import { enqueue } from "../platform/jobs.mjs";
 import { redactText } from "../platform/redact.mjs";
 import { withAiContext } from "../ai/gemini.mjs";
-import { buildWorkMap } from "../ai/ops/workmap.mjs";
+import { buildWorkMap, narrateWorkMap, LISTEN_LANGUAGES, LISTEN_REVIEWED } from "../ai/ops/workmap.mjs";
+import { tts } from "../ai/gemini.mjs";
+import { objectKey } from "../platform/storage.mjs";
 import { notifyPerson } from "./notifications.mjs";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export function createWorkMaps({ db, capture }) {
+export function createWorkMaps({ db, capture, storage }) {
   const T = (ctx, fn) => db.tenant(ctx, fn);
   const { loadSession, loadWorkflow, insertObservation, activeConsent, assertIsExpert } = capture.internals;
 
@@ -222,5 +224,28 @@ export function createWorkMaps({ db, capture }) {
   }
   async function getRun(ctx, runId) { return T(ctx, (q) => loadRun(q, ctx, runId)); }
 
-  return { liveTurn, markLive, setOffRecord, finishPhase, get, confirm, list, exportForAgents, startTutor, recordIntervention, finishTutor, getRun, handlers: { build_work_map: buildJob } };
+  /**
+   * Listen: the confirmed map as a short spoken lesson in a chosen language (script + Gemini TTS audio), cached per map
+   * version and language so each narration is generated once. The script is the transcript (shown with the audio).
+   */
+  async function listen(ctx, sessionId, language = "en", { audio = false } = {}) {
+    if (!LISTEN_LANGUAGES[language]) throw httpError(400, "unsupported language");
+    const m = await get(ctx, sessionId);
+    if (m.status !== "confirmed" && !m.mine) throw httpError(404, "work map not found");
+    if (!m.steps?.length) throw httpError(409, "this Work Map has no steps yet");
+    const base = objectKey(ctx.orgId, "narration", `${m.id}-v${m.version}-${language}`);
+    let meta = await storage.get(`${base}.json`).then((b) => (b ? JSON.parse(b.toString("utf8")) : null)).catch(() => null);
+    if (!meta) {
+      const script = await withAiContext({ orgId: ctx.orgId, sessionId }, () => narrateWorkMap({ map: m, expertName: m.expertName, title: m.title, language }));
+      if (!script) throw httpError(503, "the narration could not be written right now; try again");
+      const wav = await withAiContext({ orgId: ctx.orgId, sessionId }, () => tts(script, undefined, { timeoutMs: 120000, style: "Read this lesson aloud clearly and warmly, at a calm teaching pace:" }));
+      if (wav) await storage.put(`${base}.wav`, wav, { contentType: "audio/wav" });
+      meta = { language, script, audio: Boolean(wav), version: m.version, createdAt: new Date().toISOString() };
+      await storage.put(`${base}.json`, Buffer.from(JSON.stringify(meta)), { contentType: "application/json" });
+    }
+    if (audio) { const wav = meta.audio ? await storage.get(`${base}.wav`) : null; if (!wav) throw httpError(404, "no audio for this narration"); return wav; }
+    return { ...meta, languageName: LISTEN_LANGUAGES[language], reviewed: LISTEN_REVIEWED.has(language), audioUrl: meta.audio ? `/api/maps/${sessionId}/listen/audio?language=${language}` : null };
+  }
+
+  return { liveTurn, markLive, listen, setOffRecord, finishPhase, get, confirm, list, exportForAgents, startTutor, recordIntervention, finishTutor, getRun, handlers: { build_work_map: buildJob } };
 }

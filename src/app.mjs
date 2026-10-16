@@ -36,6 +36,8 @@ import { createNotifications } from "./domain/notifications.mjs";
 import { createStorageReport } from "./domain/storage-report.mjs";
 import { createWorkMaps } from "./domain/workmaps.mjs";
 import { createAccess } from "./domain/access.mjs";
+import { createAgents } from "./domain/agents.mjs";
+import { createImpact } from "./domain/impact.mjs";
 import { createLive } from "./domain/live.mjs";
 
 export async function buildServices(cfg, { log = createLogger(cfg), modelAdapter } = {}) {
@@ -61,15 +63,17 @@ export async function buildServices(cfg, { log = createLogger(cfg), modelAdapter
   const missions = createMissions({ db, storage, cfg, workflows, capture, transfers });
   const notifications = createNotifications({ db });
   const storageReport = createStorageReport({ db });
-  const workmaps = createWorkMaps({ db, capture });
+  const workmaps = createWorkMaps({ db, capture, storage });
   const access = createAccess({ db });
+  const agents = createAgents({ db, cfg });
+  const impact = createImpact({ db });
   const live = createLive({ db, capture, workmaps, log, cfg });
   Object.assign(handlers, capture.handlers, knowledge.handlers, apprentice.handlers, workflows.handlers, gaps.handlers, missions.handlers, workmaps.handlers);
   await policy.seedTemplates();
   if (cfg.demo.seed) await seedDemo({ db, identity, cfg, log });
   await ensureJudgeAccounts({ db, identity, cfg, log });
   await seedBenchmark(db); // measured evidence shown on Insights; platform-level, read-only
-  return { cfg, log, db, storage, jobs, identity, policy, workflows, knowledge, capture, apprentice, analytics, transfers, gaps, ask: askService, groups, missions, notifications, storageReport, workmaps, live, access };
+  return { cfg, log, db, storage, jobs, identity, policy, workflows, knowledge, capture, apprentice, analytics, transfers, gaps, ask: askService, groups, missions, notifications, storageReport, workmaps, live, access, agents, impact };
 }
 
 /** Hourly lifecycle sweep per organization (enqueued idempotently, executed by whichever worker claims it). */
@@ -468,6 +472,32 @@ export async function buildServer(s) {
     async (req) => s.workmaps.liveTurn(req.ctx, req.params.id, { role: "expert", text: req.body.text }));
   app.post("/api/live/:id/finish", S({ required: ["phase"], properties: { phase: { type: "string", enum: ["capture", "debrief"] } } }), async (req) => s.workmaps.finishPhase(req.ctx, req.params.id, req.body.phase));
   app.get("/api/maps", async (req) => s.workmaps.list(req.ctx));
+  // Guardrail agents. In the app (cookie session): connect, list, revoke, try. For agents (bearer key, no cookies):
+  // /agent/v1/check, /agent/v1/map and the MCP endpoint /agent/v1/mcp. Rate-limited per key.
+  app.post("/api/maps/:id/agent-keys", S({ properties: { label: { type: "string", maxLength: 80 } } }), async (req) => s.agents.createKey({ ...req.ctx, requestId: req.id }, req.params.id, req.body));
+  app.get("/api/maps/:id/agents", async (req) => s.agents.listKeys(req.ctx, req.params.id));
+  app.post("/api/maps/:id/agent-keys/:keyId/revoke", async (req) => s.agents.revokeKey({ ...req.ctx, requestId: req.id }, req.params.id, req.params.keyId));
+  app.post("/api/maps/:id/check", { ...aiLimit, ...S({ required: ["action"], properties: { action: { type: "string", maxLength: 2000 }, context: { type: "string", maxLength: 4000 } } }) },
+    async (req) => s.agents.checkInApp(req.ctx, req.params.id, req.body));
+  const agentLimit = { config: { rateLimit: { max: 60, timeWindow: "1 minute", keyGenerator: (req) => `agent:${sha256(String(req.headers.authorization ?? req.ip))}` } } };
+  app.post("/agent/v1/check", { ...agentLimit, ...S({ required: ["action"], properties: { action: { type: "string", maxLength: 2000 }, context: {} } }) },
+    async (req) => s.agents.check(await s.agents.authenticate(req.headers.authorization), req.body, "rest"));
+  app.get("/agent/v1/map", agentLimit, async (req) => s.agents.mapForAgent((await s.agents.authenticate(req.headers.authorization)).map));
+  app.post("/agent/v1/mcp", agentLimit, async (req, reply) => {
+    const auth = await s.agents.authenticate(req.headers.authorization);
+    const body = req.body;
+    if (Array.isArray(body)) { const out = (await Promise.all(body.map((m) => s.agents.mcp(auth, m)))).filter(Boolean); return out.length ? out : reply.code(202).send(); }
+    const out = await s.agents.mcp(auth, body);
+    return out ?? reply.code(202).send();
+  });
+  app.get("/agent/v1/mcp", async (req, reply) => reply.code(405).header("Allow", "POST").send({ error: "this MCP server answers POST requests (JSON responses, no SSE stream)" }));
+  app.get("/api/maps/:id/listen", aiLimit, async (req) => s.workmaps.listen(req.ctx, req.params.id, String(req.query.language ?? "en")));
+  app.get("/api/maps/:id/listen/audio", async (req, reply) => {
+    const wav = await s.workmaps.listen(req.ctx, req.params.id, String(req.query.language ?? "en"), { audio: true });
+    reply.type("audio/wav").header("Cache-Control", "private, max-age=3600");
+    return wav;
+  });
+  app.get("/api/impact", async (req) => s.impact.report(req.ctx));
   app.get("/api/my/sessions", async (req) => s.capture.mySessions(req.ctx));
   app.post("/api/sessions/:id/terminate", S({ required: ["confirm"], properties: { confirm: { type: "boolean", const: true } } }), async (req) => s.capture.terminate({ ...req.ctx, requestId: req.id }, req.params.id));
   app.post("/api/workflows/:id/delete", S({ required: ["confirm"], properties: { confirm: { type: "boolean", const: true } } }), async (req) => s.workflows.remove(req.ctx, req.params.id, req.id));

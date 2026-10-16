@@ -146,6 +146,38 @@ test("live capture → Work Map → debrief → confirm → export → tutor", {
       assert.ok(Array.isArray(js.body.steps));
     });
 
+    await t.test("guardrail agent: keys, REST and MCP answer from the confirmed map, in the expert's words", async () => {
+      const other = user(h.app); await other.signup("spy@t.test", "Spy Co");
+      assert.equal((await other.post(`/api/maps/${sid}/agent-keys`, { label: "x" })).status, 404, "another space cannot connect agents");
+      const k = await u.post(`/api/maps/${sid}/agent-keys`, { label: "AP automation" });
+      assert.equal(k.status, 200, JSON.stringify(k.body)); assert.match(k.body.key, /^agk_/);
+      const H = { authorization: `Bearer ${k.body.key}`, "content-type": "application/json" };
+      const call = (url, payload, headers = H) => h.app.inject({ method: "POST", url, headers, payload });
+      assert.equal((await call("/agent/v1/check", { action: "post it" }, { "content-type": "application/json" })).statusCode, 401);
+      const stop = (await call("/agent/v1/check", { action: "Post invoice INV-7 for 75,000 now", context: "supplier ravi@example.com" })).json();
+      assert.equal(stop.verdict, "STOP"); assert.equal(stop.stepId, "s1");
+      assert.equal(stop.guardrail.expertQuote, "anything over fifty thousand I hold", "the expert's words come from the confirmed map");
+      assert.equal((await call("/agent/v1/check", { action: "invent a rule" })).json().verdict, "NOT_COVERED", "a stop that points at no real guardrail is not grounded");
+      assert.equal((await call("/agent/v1/check", { action: "check the weather" })).json().verdict, "NOT_COVERED");
+      const md = (await h.app.inject({ method: "GET", url: "/agent/v1/map", headers: H })).json();
+      assert.match(md.markdown, /STOP AND ASK A PERSON/);
+      // MCP: initialize, tools/list, tools/call; notifications get 202.
+      const init = (await call("/agent/v1/mcp", { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "t", version: "1" } } })).json();
+      assert.equal(init.result.protocolVersion, "2025-06-18"); assert.ok(init.result.capabilities.tools);
+      assert.equal((await call("/agent/v1/mcp", { jsonrpc: "2.0", method: "notifications/initialized" })).statusCode, 202);
+      const tools = (await call("/agent/v1/mcp", { jsonrpc: "2.0", id: 2, method: "tools/list" })).json().result.tools.map((x) => x.name);
+      assert.deepEqual(tools, ["get_work_map", "check_action"]);
+      const res = (await call("/agent/v1/mcp", { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "check_action", arguments: { action: "post the 75,000 invoice" } } })).json();
+      assert.match(res.result.content[0].text, /^STOP/); assert.equal(res.result.structuredContent.verdict, "STOP");
+      assert.equal((await call("/agent/v1/mcp", { jsonrpc: "2.0", id: 4, method: "nope" })).json().error.code, -32601);
+      const list = (await u.get(`/api/maps/${sid}/agents`)).body;
+      assert.equal(list.checks.length, 4); assert.ok(!JSON.stringify(list.checks).includes("ravi@example.com"), "checks are stored redacted");
+      assert.ok(list.checks.some((c) => c.via === "mcp"));
+      assert.equal((await u.post(`/api/maps/${sid}/check`, { action: "post a 75,000 invoice" })).body.verdict, "STOP", "the owner can try it in the app");
+      assert.equal((await u.post(`/api/maps/${sid}/agent-keys/${k.body.id}/revoke`, {})).status, 200);
+      assert.equal((await call("/agent/v1/check", { action: "x" })).statusCode, 401, "a revoked key stops working at once");
+    });
+
     await t.test("tutor: Moti teaches from the confirmed map, replays the expert's moment, and records the result", async () => {
       const c = await socket(h, u, `mode=tutor&session=${sid}&language=hi`);
       await waitFor(() => c.got.some((m) => m.t === "ready"));
@@ -168,6 +200,32 @@ test("live capture → Work Map → debrief → confirm → export → tutor", {
       const judged = h.fake.calls.filter((x) => x.op === "judgeTutorTurn");
       assert.ok(judged.length >= 2 && /75,000/.test(judged[0].prompt), "the judge sees what the learner said");
       c.ws.close();
+    });
+
+    await t.test("listen: a narration in the learner's language, cached per version, the expert's words kept", async () => {
+      const r = (await u.get(`/api/maps/${sid}/listen?language=hi`)).body;
+      assert.match(r.script, /anything over fifty thousand I hold/); assert.equal(r.reviewed, true); assert.ok(r.audioUrl);
+      const calls = h.fake.calls.filter((c) => c.op === "narrateWorkMap").length;
+      assert.equal((await u.get(`/api/maps/${sid}/listen?language=hi`)).body.script, r.script);
+      assert.equal(h.fake.calls.filter((c) => c.op === "narrateWorkMap").length, calls, "the second request is served from the cache");
+      const audio = await h.app.inject({ method: "GET", url: r.audioUrl, headers: { cookie: u.cookie() } });
+      assert.equal(audio.statusCode, 200); assert.equal(audio.headers["content-type"], "audio/wav"); assert.equal(audio.rawPayload.subarray(0, 4).toString(), "RIFF");
+      assert.equal((await u.get(`/api/maps/${sid}/listen?language=bn`)).body.reviewed, false, "unreviewed languages are labelled");
+      assert.equal((await u.get(`/api/maps/${sid}/listen?language=xx`)).status, 400);
+    });
+
+    await t.test("impact: counted from the records of this flow, nothing estimated", async () => {
+      const d = (await u.get("/api/impact")).body;
+      assert.equal(d.capture.liveSessions, 1);
+      assert.ok(d.capture.questionsAsked >= 1 && d.capture.questionsAnswered >= 1);
+      assert.equal(d.workMaps.confirmed, 1); assert.equal(d.workMaps.debriefed, 1); assert.equal(d.workMaps.steps, 2);
+      assert.equal(d.workMaps.inExpertsWordsPct, 67, "step 1: verified reason and guardrail; step 2: a reason that was not said (2 of 3)");
+      assert.equal(d.practice.runs, 1); assert.equal(d.practice.stops, 1);
+      assert.equal(d.agents.checks, 5); assert.ok(d.agents.handedToPerson >= 2);
+      assert.deepEqual(d.languages, ["en", "hi"]);
+      const other = user(h.app); await other.signup("empty@t.test", "Empty Co");
+      const e = (await other.get("/api/impact")).body;
+      assert.equal(e.workMaps.confirmed, 0); assert.equal(e.capture.questionsPer10Min, null, "too little data is said, not guessed");
     });
 
     await t.test("another space cannot read the map", async () => {
