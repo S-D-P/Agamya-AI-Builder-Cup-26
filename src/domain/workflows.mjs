@@ -136,7 +136,8 @@ export function createWorkflows({ db, storage, cfg }) {
   async function people(ctx) {
     requirePermission(ctx, "workflow.read");
     return T(ctx, (q) => q(`SELECT p.id, p.display_name, p.title, p.user_id IS NOT NULL AS has_login, COALESCE(m.roles, '{}') AS roles
-                            FROM people p LEFT JOIN memberships m ON m.user_id = p.user_id AND m.org_id = p.org_id AND m.status = 'active' ORDER BY p.display_name`));
+                            FROM people p LEFT JOIN memberships m ON m.user_id = p.user_id AND m.org_id = p.org_id AND m.status = 'active'
+                            WHERE p.user_id IS NULL OR m.user_id IS NOT NULL ORDER BY p.display_name`)); // people removed from the space are not offered
   }
 
   // ---------------------------------------------------------------- job: understand_workflow

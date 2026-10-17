@@ -210,3 +210,30 @@ test("a new member can unlock a passcode space before accepting its policies", {
     assert.equal((await u.get("/api/maps")).status, 200);
   } finally { await h.close(); }
 });
+
+test("admins remove people from a space; access ends at once", { timeout: 60000 }, async () => {
+  const h = await harness({ env: { SIGNUP_RATE_MAX: "500" } });
+  try {
+    const owner = await account(h, "own3@r.test", "Remove Co");
+    const add = async (email, roles) => {
+      const inv = (await owner.u.post("/api/admin/invitations", { email, roles })).body;
+      const u = user(h.app);
+      assert.equal((await u.post("/api/auth/accept-invite", { token: inv.inviteUrl.split("/").pop(), displayName: email.split("@")[0], password: "a-long-test-pass-42" })).status, 200);
+      return { u, me: await u.acceptPolicies() };
+    };
+    const admin = await add("adm@r.test", ["ORG_ADMIN"]);
+    const member = await add("mem@r.test", ["LEARNER"]);
+    const g = (await owner.u.post("/api/groups", { name: "Team" })).body;
+    await owner.u.post(`/api/groups/${g.id}/members`, { personIds: [member.me.personId] });
+    assert.equal((await member.u.post(`/api/admin/members/${owner.me.user.id}/remove`, { confirm: true })).status, 403, "learners cannot remove people");
+    assert.equal((await admin.u.post(`/api/admin/members/${owner.me.user.id}/remove`, { confirm: true })).status, 403, "only an owner removes an owner or admin");
+    assert.equal((await owner.u.post(`/api/admin/members/${owner.me.user.id}/remove`, { confirm: true })).status, 409, "not yourself");
+    assert.equal((await admin.u.post(`/api/admin/members/${member.me.user.id}/remove`, {})).status, 400, "needs confirmation");
+    assert.equal((await admin.u.post(`/api/admin/members/${member.me.user.id}/remove`, { confirm: true })).status, 200);
+    assert.ok(!(await owner.u.get("/api/admin/members")).body.some((m) => m.user_id === member.me.user.id), "no longer listed");
+    assert.ok(!(await owner.u.get("/api/people")).body.some((p) => p.id === member.me.personId), "not offered for sharing");
+    assert.ok([401, 403].includes((await member.u.get("/api/maps")).status), "their access to the space ended (still signed in, but no longer in it)");
+    const grp = (await owner.u.get(`/api/groups/${g.id}`)).body;
+    assert.equal(grp.members.length, 0, "removed from the space's groups");
+  } finally { await h.close(); }
+});

@@ -44,9 +44,10 @@ Draft Work Map (English):
 ${mapText(map)}`;
 }
 
-export function tutorInstruction({ language, map, expertName }) {
-  return `You are Moti, tutoring a new hire who is doing this task on their own screen. You learned it from ${expertName}; teach it the way ${expertName} does it.
-- Watch their screen. When they reach a step, sometimes ask them to predict the next decision before you explain.
+export function tutorInstruction({ language, map, expertName, view = "screen" }) {
+  const camera = view === "camera";
+  return `You are Moti, tutoring a learner who is doing this task ${camera ? "in front of their camera (their hands, tools, materials and what they are making)" : "on their own screen"}. You learned it from ${expertName}; teach it the way ${expertName} does it.
+- Watch their ${camera ? "camera: notice what they handle, the state of the work and the order of their actions" : "screen"}. When they reach a step, sometimes ask them to predict the next decision before you explain.
 - If they are about to break a guardrail or make a decision the Work Map says is wrong, interrupt at once and kindly: "${expertName} would stop here. Why do you think?" Let them answer, then explain with ${expertName}'s reason, and offer to show how ${expertName} did it.
 - Do not hand out answers before they try. Keep turns short.
 - When they say they are finished, say in two sentences what they handled well and what to practise next.
@@ -138,7 +139,9 @@ export function createLive({ db, capture, workmaps, log, cfg }) {
       let msg; try { msg = JSON.parse(String(raw)); } catch { return; }
       try {
         if (msg.t === "audio" && typeof msg.d === "string" && msg.d.length < 200000) {
-          if (!offRecord) session?.sendRealtimeInput({ audio: { data: msg.d, mimeType: "audio/pcm;rate=16000" } });
+          // The browser reports its real microphone rate (some phones refuse 16 kHz); Gemini Live resamples.
+          const rate = Number.isInteger(msg.r) && msg.r >= 8000 && msg.r <= 48000 ? msg.r : 16000;
+          if (!offRecord) session?.sendRealtimeInput({ audio: { data: msg.d, mimeType: `audio/pcm;rate=${rate}` } });
         } else if (msg.t === "frame" && typeof msg.d === "string" && msg.d.length < 1_500_000) {
           if (offRecord) return;
           session?.sendRealtimeInput({ video: { data: msg.d, mimeType: "image/jpeg" } });
@@ -171,7 +174,7 @@ export function createLive({ db, capture, workmaps, log, cfg }) {
   }
 
   /** Authorize and describe a live connection request. Throws an HTTP error if not allowed. */
-  async function prepare(ctx, { mode, sessionId, language }) {
+  async function prepare(ctx, { mode, sessionId, language, view = "screen" }) {
     if (mode === "capture" || mode === "debrief") {
       const s = await capture.getSession(ctx, sessionId);
       if (!s.isMine) { const e = new Error("only the expert being captured can talk to Moti here"); e.status = 403; throw e; }
@@ -189,7 +192,7 @@ export function createLive({ db, capture, workmaps, log, cfg }) {
     }
     if (mode === "tutor") {
       const { runId, map } = await workmaps.startTutor(ctx, sessionId, { language: normalizeLanguage(language) });
-      return { mode, sessionId: null, runId, map, language: normalizeLanguage(language), instruction: tutorInstruction({ language: normalizeLanguage(language), map, expertName: map.expertName }) };
+      return { mode, sessionId: null, runId, map, language: normalizeLanguage(language), instruction: tutorInstruction({ language: normalizeLanguage(language), map, expertName: map.expertName, view: view === "camera" ? "camera" : "screen" }) };
     }
     const e = new Error("unknown mode"); e.status = 400; throw e;
   }

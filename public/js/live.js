@@ -11,6 +11,10 @@ export class LiveMoti {
   constructor(o) { Object.assign(this, o); this.state = "idle"; this.sent = { frames: 0, skipped: 0 }; }
 
   async start(videoEl) {
+    // Create both audio contexts NOW, inside the tap: iPhone Safari only lets audio start within the user's gesture,
+    // and everything after the first await is outside it. Some browsers refuse a fixed sample rate; fall back to default.
+    const ctx = (rate) => { try { return new AudioContext({ sampleRate: rate }); } catch { return new AudioContext(); } };
+    try { this.inCtx = ctx(16000); this.outCtx = ctx(24000); this.inCtx.resume?.().catch(() => {}); this.outCtx.resume?.().catch(() => {}); } catch { /* created again below */ }
     try { await this.open(videoEl); } catch (e) { this.stopMedia(); try { this.ws?.close(); } catch { /* not open */ } throw e; }
   }
 
@@ -18,26 +22,29 @@ export class LiveMoti {
     this.setState("starting");
     // 1. Media first, so a refused permission never leaves a half-open session.
     this.mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
-    if (this.video === "screen") this.vstream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 5 }, audio: false });
-    else if (this.video === "camera") this.vstream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720, facingMode: "environment" }, audio: false });
+    if (this.video === "screen") {
+      // Phones and tablets cannot share their screen from a browser (iOS Safari, Chrome on Android): say so plainly.
+      if (typeof navigator.mediaDevices?.getDisplayMedia !== "function") throw new Error("This device's browser cannot share its screen. Use the camera instead, or open Agamya in Chrome or Edge on a computer.");
+      this.vstream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 5 }, audio: false });
+    } else if (this.video === "camera") { this.facing = this.facing ?? "environment"; this.vstream = await this.cameraStream(); }
     if (this.vstream) this.attachVideo(videoEl ?? document.getElementById("now-video"));
     this.vstream?.getVideoTracks()[0]?.addEventListener("ended", () => this.onError?.("Screen sharing stopped. Share again or end the session."));
     // 2. Socket.
-    const url = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/live?mode=${this.mode}&${this.sessionId ? `session=${this.sessionId}&` : ""}language=${this.language ?? "en"}`;
+    const url = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/live?mode=${this.mode}&${this.sessionId ? `session=${this.sessionId}&` : ""}language=${this.language ?? "en"}${this.video ? `&view=${this.video}` : ""}`;
     this.ws = new WebSocket(url);
     this.ws.onmessage = (e) => this.onMessage(JSON.parse(e.data));
     this.ws.onclose = () => { this.stopMedia(); if (this.state !== "ended" && this.state !== "closed") this.setState("closed"); };
     this.ws.onerror = () => this.onError?.("Connection to Moti failed.");
     await new Promise((res, rej) => { this.ws.onopen = res; setTimeout(() => rej(new Error("Moti did not answer. Try again.")), 15000); });
     // 3. Microphone → 16 kHz PCM chunks.
-    this.inCtx = new AudioContext({ sampleRate: 16000 });
+    this.inCtx = this.inCtx ?? new AudioContext({ sampleRate: 16000 });
     await this.inCtx.audioWorklet.addModule("/js/pcm-worklet.js");
     const src = this.inCtx.createMediaStreamSource(this.mic);
     this.node = new AudioWorkletNode(this.inCtx, "pcm-capture");
-    this.node.port.onmessage = (e) => { if (this.ws?.readyState === 1 && !this.muted) this.ws.send(JSON.stringify({ t: "audio", d: b64(e.data) })); };
+    this.node.port.onmessage = (e) => { if (this.ws?.readyState === 1 && !this.muted) this.ws.send(JSON.stringify({ t: "audio", d: b64(e.data), r: this.inCtx.sampleRate })); };
     src.connect(this.node);
     // 4. Playback context for Moti's voice.
-    this.outCtx = new AudioContext({ sampleRate: 24000 }); this.playAt = 0; this.sources = new Set();
+    this.outCtx = this.outCtx ?? new AudioContext({ sampleRate: 24000 }); this.playAt = 0; this.sources = new Set();
     // 5. Frames.
     if (this.vstream) { this.canvas = document.createElement("canvas"); this.thumb = document.createElement("canvas"); this.thumb.width = 32; this.thumb.height = 18; this.timer = setInterval(() => this.tickFrame(), 1000); }
   }
@@ -100,6 +107,21 @@ export class LiveMoti {
     for (const ctx of [this.inCtx, this.outCtx]) if (ctx && ctx.state !== "closed") ctx.close().catch(() => {});
   }
   close() { if (this.state !== "ended") this.setState("ended"); try { this.ws?.close(); } catch { /* closed */ } this.stopMedia(); }
+  async cameraStream() {
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error("This browser cannot use the camera here. Open Agamya over https in a current browser.");
+    return navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: { ideal: this.facing } }, audio: false });
+  }
+  /** Phones: switch between the back camera (the work) and the front camera (the person). */
+  async flipCamera() {
+    if (this.video !== "camera" || !this.vstream) return;
+    this.facing = this.facing === "environment" ? "user" : "environment";
+    const next = await this.cameraStream();
+    this.vstream.getTracks().forEach((t) => t.stop());
+    this.vstream = next;
+    if (this.videoEl) { this.videoEl.srcObject = null; this.attachVideo(this.videoEl); }
+    this.prev = null; // the next frame is a change: send it
+  }
+
   /** The page re-renders; give the live stream to the new <video> element so the person keeps seeing themselves. */
   attachVideo(el) {
     if (!el || !this.vstream) return;
@@ -111,6 +133,6 @@ export class LiveMoti {
 
 export const liveSupport = () => ({
   mic: Boolean(navigator.mediaDevices?.getUserMedia && window.AudioWorkletNode),
-  screen: Boolean(navigator.mediaDevices?.getDisplayMedia),
+  screen: typeof navigator.mediaDevices?.getDisplayMedia === "function",
   camera: Boolean(navigator.mediaDevices?.getUserMedia),
 });

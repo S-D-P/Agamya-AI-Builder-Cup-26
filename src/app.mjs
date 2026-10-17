@@ -301,6 +301,8 @@ export async function buildServer(s) {
   app.post("/api/policies/accept", S({ required: ["ids"], properties: { ids: { type: "array", maxItems: 10, items: id } } }), async (req) => { await s.policy.accept(req.ctx, req.body.ids, meta(req)); policyCache.delete(`${req.ctx.sessionId}:${req.ctx.orgId}`); return s.policy.status(req.ctx); });
   app.post("/api/admin/policies", S({ required: ["type", "version", "content"], properties: { type: { type: "string" }, version: { type: "string", maxLength: 40 }, content: { type: "string", maxLength: 100000 } } }), async (req) => { requirePermission(req.ctx, "policy.manage"); return s.policy.publish(req.ctx, req.body, req.id); });
   app.get("/api/admin/members", async (req) => { requirePermission(req.ctx, "members.manage"); return s.identity.listMembers(req.ctx); });
+  app.post("/api/admin/members/:userId/remove", S({ required: ["confirm"], properties: { confirm: { type: "boolean", const: true } } }),
+    async (req) => { requirePermission(req.ctx, "members.manage"); return s.identity.removeMember(req.ctx, req.params.userId, req.id); });
   app.post("/api/admin/members/:userId/roles", S({ required: ["roles"], properties: { roles: { type: "array", maxItems: 5, items: { type: "string" } } } }), async (req) => { requirePermission(req.ctx, "members.manage"); await s.identity.setRoles(req.ctx, req.params.userId, req.body.roles, req.id); return { ok: true }; });
   app.post("/api/admin/invitations", S({ required: ["email", "roles"], properties: { email: { type: "string", maxLength: 320 }, roles: { type: "array", maxItems: 5, items: { type: "string" } } } }), async (req) => { requirePermission(req.ctx, "members.invite"); return s.identity.invite(req.ctx, req.body, req.id); });
   app.get("/api/admin/audit", async (req) => s.analytics.audit(req.ctx, { before: req.query.before ?? null, limit: Number(req.query.limit) || 50 }));
@@ -471,7 +473,7 @@ export async function buildServer(s) {
     socket.on("message", hold);
     socket.early = { messages: early, stop: () => socket.off("message", hold) };
     try {
-      const spec = await s.live.prepare({ ...req.ctx, requestId: req.id }, { mode: String(req.query.mode ?? ""), sessionId: String(req.query.session ?? ""), language: req.query.language ? String(req.query.language) : undefined });
+      const spec = await s.live.prepare({ ...req.ctx, requestId: req.id }, { mode: String(req.query.mode ?? ""), sessionId: String(req.query.session ?? ""), language: req.query.language ? String(req.query.language) : undefined, view: req.query.view === "camera" ? "camera" : "screen" });
       await s.live.attach(socket, { ...req.ctx, requestId: req.id }, spec);
     } catch (e) { socket.send(JSON.stringify({ t: "error", message: e.expose || e.status < 500 ? e.message : "Moti could not start" })); socket.close(1008, "refused"); }
   });

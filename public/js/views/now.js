@@ -55,12 +55,12 @@ export function startView(r) {
         <dt>Who sees it</dt><dd>${isLiving() ? "Only you, until you share it." : "You first. After you confirm the Work Map, people learning this work in your organization."}</dd>
         <dt>Kept</dt><dd>Recordings for 30 days for your review; the confirmed Work Map until you remove it.</dd>
         <dt>Your controls</dt><dd>Off the record, stop, and delete any moment.</dd></dl>
-      ${can ? "" : `<p class="callout" role="alert">${!sup.mic ? "This browser cannot record audio here." : kind === "screen" ? "Screen sharing needs a desktop browser." : "No camera is available."} You can still type your explanation once started.</p>`}
-      <div class="row"><button class="primary lg" data-act="now-start" data-kind="${kind}" ${state.busy ? "disabled" : ""}>${icon("play", 16)} I agree, start</button><a class="btn ghost" href="#/">Not now</a></div>
+      ${can ? "" : `<p class="callout" role="alert">${!sup.mic ? "This browser cannot record audio here." : kind === "screen" ? `This device's browser cannot share its screen (phones and tablets cannot). <a href="#/start/camera">Use the camera instead</a>, or open Agamya on a computer.` : "No camera is available."}${kind === "screen" && sup.mic ? "" : " You can still type your explanation once started."}</p>`}
+      <div class="row"><button class="primary lg" data-act="now-start" data-kind="${kind}" ${state.busy || (kind === "screen" && voiceReady() && !sup.screen) ? "disabled" : ""}>${icon("play", 16)} I agree, start</button><a class="btn ghost" href="#/">Not now</a></div>
     </section>`);
   }
   return shell(`<div class="now-stage ${kind}">
-    <div class="now-video">${live instanceof TypedMoti ? `<p class="now-typed">Typed session: nothing from your ${kind} is captured.</p>` : `<video id="now-video" aria-label="${kind === "camera" ? "Your camera" : "Your shared screen"}" muted playsinline></video>`}
+    <div class="now-video">${kind === "camera" && !(live instanceof TypedMoti) ? `<button class="sm now-flip" data-act="flip-camera">Switch camera</button>` : ""}${live instanceof TypedMoti ? `<p class="now-typed">Typed session: nothing from your ${kind} is captured.</p>` : `<video id="now-video" aria-label="${kind === "camera" ? "Your camera" : "Your shared screen"}" muted playsinline></video>`}
       ${view.offRecord ? `<div class="now-offrec" role="status">Off the record: nothing is being captured</div>` : ""}</div>
     <aside class="now-panel" aria-labelledby="moti-h"><div class="row">${orb(view.status === "speaking" ? "asking" : "observing", 44, { caption: false })}<h2 id="moti-h" class="h3">Moti</h2></div>
       ${conversation()}
@@ -235,11 +235,15 @@ export function practiceView(r) {
   }
   if (view.status === "idle") {
     return shell(`<section class="now-consent" aria-labelledby="p-h"><h1 id="p-h">Practise: ${esc(m.title)}</h1>
-      <p>Do the task on your own screen. Moti learned it from ${esc(m.expertName)}. It will ask you to predict decisions and step in before a guardrail is broken, replaying ${esc(m.expertName)}'s moment when it helps. Your screen is shown to Moti only; nothing from it is stored.</p>
+      <p>Do the task in front of your camera or on your screen. Moti learned it from ${esc(m.expertName)}. It will ask you to predict decisions and step in before a guardrail is broken, replaying ${esc(m.expertName)}'s moment when it helps. What Moti sees is not stored.</p>
       <div class="field"><label for="now-lang">Teach me in</label><select id="now-lang">${LANG_OPTIONS.map((l) => `<option value="${l.code}" lang="${l.code}" ${l.code === (state.me?.user?.language || "en") ? "selected" : ""}>${esc(l.native)}${l.native !== l.name ? ` (${esc(l.name)})` : ""}</option>`).join("")}</select></div>
-      <div class="row"><button class="primary lg" data-act="practice-start">${icon("play", 16)} Share my screen and start</button></div></section>`);
+      <div class="row wrap"><button class="primary lg" data-act="practice-start" data-kind="camera" ${liveSupport().camera ? "" : "disabled"}>${icon("camera", 16)} Start with my camera</button>
+        <button class="lg" data-act="practice-start" data-kind="screen" ${liveSupport().screen ? "" : "disabled"}>${icon("screen", 16)} Share my screen</button></div>
+      ${liveSupport().screen ? "" : `<p class="small muted">This browser cannot share its screen (phones and tablets cannot). Use the camera, or a computer for screen sharing.</p>`}</section>`);
   }
-  return shell(`<div class="now-stage screen"><div class="now-video"><video id="now-video" aria-label="Your shared screen" muted playsinline></video>
+  const pv = live?.video === "camera" ? "camera" : "screen";
+  return shell(`<div class="now-stage ${pv}"><div class="now-video"><video id="now-video" aria-label="${pv === "camera" ? "Your camera" : "Your shared screen"}" muted playsinline></video>
+      ${pv === "camera" ? `<button class="sm now-flip" data-act="flip-camera">Switch camera</button>` : ""}
       ${view.moment ? `<figure class="now-moment" role="dialog" aria-label="How ${esc(m.expertName)} did it"><figcaption>How ${esc(m.expertName)} did it: ${esc(view.moment.title)}</figcaption><img src="/api/media/${view.moment.mediaId}" alt="${esc(m.expertName)}'s screen at this step"><button class="sm" data-act="moment-close">Close</button></figure>` : ""}</div>
     <aside class="now-panel" aria-labelledby="moti-h"><div class="row">${orb(view.status === "speaking" ? "asking" : "observing", 44, { caption: false })}<h2 id="moti-h" class="h3">Moti, your tutor</h2></div>
       ${conversation()}${typeBox()}
@@ -331,10 +335,15 @@ export async function nowClick(e) {
   }
   if (a === "practice-start") {
     const language = document.getElementById("now-lang")?.value ?? "en";
-    try { view.lines = []; view.status = "starting"; render(); await connect({ mode: "tutor", sessionId: view.map.sessionId, language, video: "screen" }).start(document.getElementById("now-video")); }
-    catch (err) { leaveNow(); view.map = null; toast(err.message, true); render(); }
+    const kind = el.dataset.kind === "screen" ? "screen" : "camera";
+    try { view.lines = []; view.status = "starting"; render(); await connect({ mode: "tutor", sessionId: view.map.sessionId, language, video: kind }).start(document.getElementById("now-video")); }
+    catch (err) {
+      const keep = view.map; leaveNow(); view.map = keep; // stay on this page with the choice still available
+      toast(/Permission|NotAllowed|denied/i.test(`${err.name} ${err.message}`) ? "Allow the camera and microphone in the browser, then try again." : err.message, true); render();
+    }
     return true;
   }
+  if (a === "flip-camera") { try { await live?.flipCamera(); } catch (err) { toast(err.message, true); } return true; }
   if (a === "practice-finish") { live?.say("I'm finished."); return true; }
   if (a === "moment-close") { view.moment = null; render(); return true; }
   if (a === "finish-session") {

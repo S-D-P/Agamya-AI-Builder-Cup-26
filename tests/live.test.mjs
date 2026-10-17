@@ -228,6 +228,13 @@ test("live capture → Work Map → debrief → confirm → export → tutor", {
       assert.equal(e.workMaps.confirmed, 0); assert.equal(e.capture.questionsPer10Min, null, "too little data is said, not guessed");
     });
 
+    await t.test("practice with the camera: Moti is told it watches hands, tools and materials", async () => {
+      const c = await socket(h, u, `mode=tutor&session=${sid}&language=en&view=camera`);
+      await waitFor(() => c.got.some((m) => m.t === "ready"));
+      assert.match(live.sessions.at(-1).config.systemInstruction, /in front of their camera/);
+      c.ws.close();
+    });
+
     await t.test("another space cannot read the map", async () => {
       const other = user(h.app); await other.signup("mal@t.test", "Mal Co");
       assert.equal((await other.get(`/api/maps/${sid}`)).status, 404);

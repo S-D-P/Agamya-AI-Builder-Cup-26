@@ -112,7 +112,7 @@ const TESTS = [
     ["Sign in and accept the policies.", "The policies are titled plainly (no \"template\"). After accepting you reach Home, with Start buttons and your recent sessions."],
     ["Press Back (bottom-left) on any page except Home.", "You return to the previous page."],
   ]],
-  ["Record your work with Moti (Work, screen)", "Home → Start with your screen", [
+  ["Record your work with Moti (Work, screen)", "Home → Start with your screen (on a computer)", [
     ["Type a task name, choose a language, press I agree, start.", "The browser asks for the microphone and which screen to share."],
     ["Share a screen with a test spreadsheet. Work and explain aloud, e.g. \"anything over fifty thousand I hold for the controller\". Then pause.", "Your screen stays visible. After a pause Moti asks one short question, by voice and in text."],
     ["Type a line in \"Type instead of speaking\" and press Enter.", "It appears as You; Moti may reply."],
@@ -141,7 +141,8 @@ const TESTS = [
     ["Choose Bengali.", "The narration is labelled \"not yet reviewed by a native speaker\"."],
   ]],
   ["Practise with Moti as tutor", "Confirmed Work Map → Practise this", [
-    ["Choose ಕನ್ನಡ (Kannada) or हिन्दी (Hindi) and share your screen.", "Moti greets you in that language."],
+    ["Choose ಕನ್ನಡ (Kannada) or हिन्दी (Hindi) and press Start with my camera (on a phone) or Share my screen (on a computer).", "Moti greets you in that language. On a phone, Share my screen is shown as unavailable instead of failing."],
+    ["During camera practice on a phone, press Switch camera.", "The picture switches between the back and the front camera."],
     ["Start doing the task the wrong way, e.g. say \"I'm posting this 72,000 invoice now\".", "Moti stops you (\"... would stop here. Why do you think?\") and can show the expert's screen moment."],
     ["Say \"I'm finished\" (or press I'm finished).", "A summary appears: handled well, practise next, and \"not a certification\"."],
   ]],
@@ -175,6 +176,7 @@ const TESTS = [
     ["Open the invitation link in a private window.", "It names the space and says whether to create a password or use your existing one. There is no separate space password."],
     ["As a learner with nothing shared, open Learning → Ask a teacher to share.", "\"Request sent\". The teacher sees it in the inbox with Share selected / Decline, and you are told the outcome."],
     ["Capture a skill → Delete on a skill, and confirm.", "It disappears from the list."],
+    ["As an owner or admin, open People (or Administration) and press Remove from space on a member, then confirm.", "They disappear from the list and from sharing choices; their access to the space ends at once. Only the owner can remove an owner or admin."],
   ]],
 ];
 

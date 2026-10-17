@@ -45,7 +45,8 @@ function members() {
   const pending = data.invitations.filter((x) => x.status === "pending");
   return `<div class="grid cols-2">${manager() ? `<section class="card pad stack" aria-labelledby="mem-h"><h2 id="mem-h">Members</h2>
     <p class="small muted">Roles apply to this space only. ${owner ? "" : "Only an owner can grant or remove Owner and Administrator."}</p>
-    ${data.members.map((m) => `<div class="stack" style="border-bottom:1px dashed var(--line);padding-bottom:10px"><div class="row between wrap"><span><b>${esc(m.display_name)}</b> <span class="small muted">${esc(m.email)}</span></span><span class="small faint">${m.last_login_at ? `last sign-in ${ago(m.last_login_at)}` : "never signed in"}</span></div>
+    ${data.members.map((m) => `<div class="stack" style="border-bottom:1px dashed var(--line);padding-bottom:10px"><div class="row between wrap"><span><b>${esc(m.display_name)}</b> <span class="small muted">${esc(m.email)}</span></span><span class="small faint">${m.last_login_at ? `last sign-in ${ago(m.last_login_at)}` : "never signed in"}</span>
+        ${m.user_id !== state.me.user.id && (owner || !m.roles.some((r) => OWNER_ONLY.includes(r))) ? `<button class="ghost sm danger" data-act="remove-member" data-user="${m.user_id}" data-name="${esc(m.display_name)}">Remove from space</button>` : ""}</div>
       <div class="row" role="group" aria-label="Roles for ${esc(m.display_name)}">${ROLES().map((r) => `<button class="chip" aria-pressed="${m.roles.includes(r)}" data-act="role" data-user="${m.user_id}" data-role="${r}" title="${esc(ROLE_HELP[r] ?? "")}" ${OWNER_ONLY.includes(r) && !owner ? "disabled" : ""}>${esc(label(r))}</button>`).join("")}</div></div>`).join("")}</section>` : ""}
     <section class="card pad stack" aria-labelledby="inv-h"><h2 id="inv-h">Invite someone</h2><label class="field" for="inv-email">Email<input id="inv-email" data-draft="inv-email" type="email" autocomplete="off"></label>
       <fieldset class="roles-fieldset"><legend class="small"><b>Roles in this space</b></legend><div class="stack">${ROLES().filter((r) => manager() || ["EXPERT", "LEARNER"].includes(r)).map((r) => `<label class="check"><input type="checkbox" data-inv-role="${r}" ${r === "LEARNER" ? "checked" : ""} ${OWNER_ONLY.includes(r) && !owner ? "disabled" : ""}> ${esc(label(r))} <span class="small muted">${esc(ROLE_HELP[r] ?? "")}</span></label>`).join("")}</div></fieldset>
@@ -93,6 +94,10 @@ export async function adminClick(e) {
     const roles = m.roles.includes(t.dataset.role) ? m.roles.filter((r) => r !== t.dataset.role) : [...m.roles, t.dataset.role];
     if (!roles.length) return toast("A member needs at least one role.", true);
     return act("role", async () => { await api("POST", `/api/admin/members/${m.user_id}/roles`, { roles }); data = null; });
+  }
+  if (a === "remove-member") {
+    if (!confirm(`Remove ${t.dataset.name} from this space? Their access ends now and they leave its groups. What they contributed stays. You can invite them again later.`)) return;
+    return act("remove", async () => { await api("POST", `/api/admin/members/${t.dataset.user}/remove`, { confirm: true }); toast(`${t.dataset.name} was removed from the space.`); announce(`${t.dataset.name} removed.`); data = null; });
   }
   if (a === "copy-invite") { navigator.clipboard?.writeText(lastInvite.inviteUrl).then(() => { toast("Link copied."); announce("Invitation link copied."); }, () => toast("Copy the link from the box.", true)); return; }
   if (a === "revoke-inv") return act("revoke", async () => { await api("POST", `/api/admin/invitations/${t.dataset.id}/revoke`); toast("Invitation revoked."); data = null; });

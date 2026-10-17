@@ -240,7 +240,30 @@ export function createIdentity({ db, cfg }) {
     // ---------------------------------------------------------------- members & invitations (admin; authz checked by caller)
     async listMembers(ctx) {
       return db.system((q) => q(`SELECT u.id AS user_id, u.email, u.display_name, m.roles, m.status, u.last_login_at
-                                 FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.org_id = $1 ORDER BY u.display_name`, [ctx.orgId]));
+                                 FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.org_id = $1 AND m.status = 'active' ORDER BY u.display_name`, [ctx.orgId]));
+    },
+
+    /**
+     * Remove someone from this space (owners and admins). Their access ends at once (open sessions in this space are
+     * closed) and they leave the space's groups. What they contributed stays with the space; an invitation can bring
+     * them back. You cannot remove yourself or the last owner; only an owner removes an owner or an administrator.
+     */
+    async removeMember(ctx, userId, requestId) {
+      if (userId === ctx.userId) throw httpError(409, "you cannot remove yourself; ask another admin");
+      return db.system(async (q) => {
+        const [m] = await q("SELECT roles, status FROM memberships WHERE org_id = $1 AND user_id = $2", [ctx.orgId, userId]);
+        if (!m || m.status !== "active") throw httpError(404, "member not found");
+        if (OWNER_GRANTED.some((r) => m.roles.includes(r)) && !ctx.roles.includes("ORG_OWNER")) throw httpError(403, "only the space owner can remove an owner or administrator");
+        if (m.roles.includes("ORG_OWNER")) {
+          const owners = await q("SELECT count(*)::int AS n FROM memberships WHERE org_id = $1 AND status = 'active' AND 'ORG_OWNER' = ANY(roles)", [ctx.orgId]);
+          if (owners[0].n <= 1) throw httpError(409, "a space must keep at least one owner");
+        }
+        await q("UPDATE memberships SET status = 'removed', updated_at = now() WHERE org_id = $1 AND user_id = $2", [ctx.orgId, userId]);
+        await q("UPDATE auth_sessions SET active_org_id = NULL WHERE user_id = $1 AND active_org_id = $2", [userId, ctx.orgId]);
+        await q(`UPDATE group_members SET removed_at = now() WHERE removed_at IS NULL AND person_id IN (SELECT id FROM people WHERE org_id = $1 AND user_id = $2)`, [ctx.orgId, userId]);
+        await audit(q, { orgId: ctx.orgId, userId: ctx.userId, action: "members.remove", targetType: "user", targetId: userId, requestId });
+        return { removed: true };
+      });
     },
 
     async setRoles(ctx, userId, roles, requestId) {
