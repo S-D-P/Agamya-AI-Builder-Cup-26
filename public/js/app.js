@@ -5,7 +5,7 @@ import { accessClick, invalidateAccess } from "./views/access.js";
 import { impactView, invalidateImpact } from "./views/impact.js";
 import { mapsToLearn, myMaps, mapListsClick, invalidateMapLists } from "./views/maplists.js";
 // Learning and the knowledge pages show Work Maps first (they are what live sessions produce), then the older items.
-const learnWithMaps = (r) => (r.id ? apprenticeView(r) : `<div class="page-head"><div><h1>${isLiving() ? "Learning" : "My lessons"}</h1></div></div>${mapsToLearn()}<div style="margin-top:18px">${apprenticeView(r)}</div>`);
+const learnWithMaps = (r) => (r.id ? apprenticeView(r) : `<div class="page-head"><div><h1>Learning</h1></div></div>${mapsToLearn()}<div style="margin-top:18px">${apprenticeView(r)}</div>`);
 const knowledgeWithMaps = (r) => (r.id ? knowledgeView(r) : `${myMaps()}<div style="margin-top:18px">${knowledgeView(r)}</div>`);
 import { state, api, esc, onRender, render, route, go, has, setWorkflow, workflow, act, isLiving, isSample, store, toast } from "./core.js";
 import { icon } from "./icons.js";
@@ -49,7 +49,7 @@ const WORK = {
 };
 const LIVING = {
   views: {
-    home: [livingHomeView, livingClick], journey: [journeyView, livingClick], capture: [skillsView, livingClick, livingChange], session: [sessionView, sessionClick, sessionChange],
+    home: [livingHomeView, livingClick], journey: [(r) => (isSample() ? journeyView(r) : (go("#/"), "")), livingClick], // the featured journey exists only in sample spaces capture: [skillsView, livingClick, livingChange], session: [sessionView, sessionClick, sessionChange],
     knowledge: [knowledgeWithMaps, knowledgeClick, knowledgeChange], learn: [learnWithMaps, apprenticeClick], sharing: [sharingView, livingClick, livingChange], people: [adminView, adminClick],
     workflows: [workflowsView, workflowsClick, workflowsChange], impact: [impactView, () => {}], ...SHARED_VIEWS,
   },

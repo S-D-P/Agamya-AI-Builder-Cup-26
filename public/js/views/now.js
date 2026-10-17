@@ -110,7 +110,7 @@ export function mapView(r) {
   const id = r.id;
   if (!view.map || view.map.sessionId !== id) { loadMap(id); return shell(`<span class="thinking">Loading the Work Map</span>`, { dark: false }); }
   const m = view.map;
-  if (m.error) return shell(`<section class="now-wait"><h1>Work Map not available</h1><p class="muted">${esc(m.error)}</p><a class="btn" href="#/">Home</a></section>`, { dark: false });
+  if (m.error) return notAvailable(m);
   if (!m.steps && !m.building) return shell(`<section class="now-wait"><h1>No Work Map yet</h1><p class="muted">This session ${m.status === "capturing" ? "was not finished. Build the map from what was recorded, or terminate it." : "ended without enough to build a map."}</p>
     <div class="row">${m.status === "capturing" ? `<button class="primary" data-act="finish-session" data-id="${m.sessionId}">Build the Work Map</button><button class="ghost" data-act="terminate-session" data-id="${m.sessionId}">Terminate</button>` : ""}<a class="btn" href="#/">Home</a></div></section>`, { dark: false });
   if (m.building || !m.steps) { clearTimeout(mapTimer); mapTimer = setTimeout(() => loadMap(id), 2500); return shell(`<section class="now-wait">${orb("thinking", 72)}<h1>Building your Work Map</h1><p class="muted">Moti is putting the steps, reasons and guardrails together from what you showed and said.</p></section>`, { dark: false }); }
@@ -217,15 +217,24 @@ function agentsPanel(m) {
   </section>`;
 }
 
+/** A map this person cannot open (or that does not exist): say so and offer the way forward, without revealing more. */
+function notAvailable(m) {
+  return shell(`<section class="now-wait"><h1>This Work Map is not available to you</h1>
+    <p class="muted">It does not exist, or its expert has not shared it with you yet. You can ask for access from the Learning page; the expert or a space admin decides.</p>
+    <div class="row"><a class="btn primary" href="#/learn">Go to Learning</a><a class="btn" href="#/">Home</a></div></section>`, { dark: false });
+}
+
 async function loadMap(id) {
   try { view.map = await api("GET", `/api/maps/${id}`); render(); }
-  catch (e) { view.map = { sessionId: id, error: e.message }; toast(e.message, true); render(); }
+  catch (e) { view.map = { sessionId: id, error: e.message }; if (e.status !== 404) toast(e.message, true); render(); }
 }
 
 // ---------------------------------------------------------------- practice (tutor)
 export function practiceView(r) {
   if (!view.map || view.map.sessionId !== r.id) { loadMap(r.id); return shell(`<span class="thinking">Loading</span>`); }
   const m = view.map;
+  if (m.error) return notAvailable(m);
+  if (m.status !== "confirmed") return shell(`<section class="now-wait"><h1>Not ready for practice yet</h1><p class="muted">Practice opens once the expert confirms this Work Map.</p><a class="btn" href="#/map/${esc(m.sessionId)}">Open the Work Map</a></section>`, { dark: false });
   if (view.run?.result) {
     const name = (ids) => ids.map((x) => m.steps.find((s) => s.id === x)?.title ?? x);
     return shell(`<section class="now-consent" aria-labelledby="p-h"><h1 id="p-h">Practice finished</h1><p>${esc(view.run.result.summary)}</p>

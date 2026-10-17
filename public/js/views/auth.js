@@ -177,7 +177,7 @@ export function policiesView() {
   const p = state.me?.policies;
   if (!p) return `<span class="thinking">Loading</span>`;
   const pending = new Set(p.pending);
-  for (const d of p.policies) if (!policyDocs[d.id]) { policyDocs[d.id] = "loading"; api("GET", `/api/policies/${d.id}`).then((doc) => { policyDocs[d.id] = doc; render(); }); }
+  for (const d of p.policies) if (!policyDocs[d.id]) { policyDocs[d.id] = "loading"; api("GET", `/api/policies/${d.id}`).then((doc) => { policyDocs[d.id] = doc; render(); }).catch(() => { delete policyDocs[d.id]; }); }
   return `<div class="page-head"><div><div class="eyebrow">Before you continue</div><h1>Policies for ${esc(state.me.org?.name)}</h1>
     <p>These are versioned. Your acceptance is recorded with the version and a hash of its text. Recording consent is asked separately, each time capture starts.</p></div></div>
     <div class="grid" style="max-width:900px">${p.policies.map((d) => `<details class="card pad" ${pending.has(d.id) && p.policies.indexOf(d) === 0 ? "open" : ""}>

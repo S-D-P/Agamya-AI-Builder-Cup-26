@@ -4,7 +4,7 @@ import { state, api, esc, render, act, go, draft, has, ago, toast, setWorkflow }
 import { icon } from "../icons.js";
 import { orb } from "../persona.js";
 
-let list = null, detail = null, people = null, wfDetail = null;
+let list = null, detail = null, people = null, wfDetail = null, wfLoading = null;
 const startSel = { source: null, caseRef: null };
 const plan = { workflowId: null, expert: null, learner: null };
 export function invalidateTransfers() { list = null; detail = null; }
@@ -54,7 +54,9 @@ function planView() {
 function detailView(id) {
   if (!detail || detail.id !== id) { api("GET", `/api/transfers/${id}`).then((d) => { detail = d; render(); }).catch((e) => { toast(e.message, true); go("#/transfers"); }); return `<span class="thinking">Loading</span>`; }
   const t = detail, p = t.progress;
-  if (t.role === "expert" && t.status === "scheduled" && (!wfDetail || wfDetail.id !== t.workflowId)) { api("GET", `/api/workflows/${t.workflowId}`).then((w) => { wfDetail = w; render(); }); }
+  if (t.role === "expert" && t.status === "scheduled" && (!wfDetail || wfDetail.id !== t.workflowId) && wfLoading !== t.workflowId) {
+    wfLoading = t.workflowId; api("GET", `/api/workflows/${t.workflowId}`).then((w) => { wfDetail = w; }).catch(() => { wfDetail = { id: t.workflowId, procedures: [], documents: [], people: [] }; }).finally(() => { wfLoading = null; render(); });
+  }
   return `<div class="page-head"><div><div class="eyebrow">${esc(t.workflowName)} · knowledge transfer</div><h1>${esc(t.expert.name)} → ${esc(t.learner.name)}</h1><p>${esc(t.purpose)}</p></div>
       <div class="row">${stageTag(p.stage)}${t.role === "manager" && t.status === "scheduled" ? `<button class="sm ghost" data-act="tp-status" data-v="cancelled">Cancel transfer</button>` : ""}</div></div>
   <div class="grid cols-2">

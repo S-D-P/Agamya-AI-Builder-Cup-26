@@ -51,7 +51,7 @@ async function load(wfId) { lessons = { wf: wfId, rows: await api("GET", `/api/w
 
 function attemptView(at) {
   const s = at.scenario;
-  if (s.hasVisual && !visuals.has(s.id)) { visuals.set(s.id, null); api("GET", `/api/scenarios/${s.id}/visual`).then((v) => { visuals.set(s.id, v.svg); render(); }); }
+  if (s.hasVisual && !visuals.has(s.id)) { visuals.set(s.id, null); api("GET", `/api/scenarios/${s.id}/visual`).then((v) => { visuals.set(s.id, v.svg); render(); }).catch(() => {}); } // the case reads fine without its picture
   const decisions = at.steps.filter((x) => x.type === "decision");
   const hinted = at.steps.some((x) => x.type === "intervention");
   const steps = ["Scenario", "Decide", "Reason", "Hint", "Decision", "Feedback", "Transfer"];

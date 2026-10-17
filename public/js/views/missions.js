@@ -157,7 +157,7 @@ function reviewView(id) {
 function overviewView(id) {
   if (!current || current.id !== id) { api("GET", `/api/missions/${id}`).then((m) => { current = m; render(); }).catch((e) => { toast(e.message, true); go("#/missions"); }); return `<span class="thinking">Loading mission</span>`; }
   const m = current;
-  if (m.assessing) setTimeout(() => { if (current?.id === id && location.hash.startsWith(`#/missions/${id}`)) api("GET", `/api/missions/${id}`).then((x) => { current = x; render(); }); }, 2500);
+  if (m.assessing) setTimeout(() => { if (current?.id === id && location.hash.startsWith(`#/missions/${id}`)) api("GET", `/api/missions/${id}`).then((x) => { current = x; render(); }).catch(() => {}); }, 2500);
   if (m.me.expert && m.workflowId && (!wfDetail || wfDetail.id !== m.workflowId)) api("GET", `/api/workflows/${m.workflowId}`).then((w) => { wfDetail = w; render(); }).catch(() => {});
   const idx = STAGES.findIndex(([k]) => k === m.stage);
   return `<div class="page-head"><div><div class="eyebrow">KT mission · ${esc(m.template?.name ?? m.template?.key ?? "")}${m.domain ? ` · ${esc(m.domain)}` : ""}</div><h1${langAttr(scriptLang(m.name))}>${esc(m.name)}</h1>

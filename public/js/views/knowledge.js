@@ -19,7 +19,7 @@ export function knowledgeView(r) {
   const key = living ? "mine" : w?.id;
   if (!list || list.key !== key) {
     (living ? api("GET", "/api/knowledge/mine").then((m) => [...m.mine, ...m.sharedWithMe]) : api("GET", `/api/workflows/${w.id}/knowledge`))
-      .then((rows) => { list = { key, rows }; render(); }).catch((e) => toast(e.message, true));
+      .then((rows) => { list = { key, rows }; render(); }).catch((e) => { list = { key, rows: [] }; toast(e.message, true); render(); }); // fail once, not on every render
     return `<span class="thinking">Loading knowledge</span>`;
   }
   const id = r.id ?? list.rows[0]?.id;
