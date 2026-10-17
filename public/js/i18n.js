@@ -3,7 +3,7 @@
 //   content language:   the language a person speaks or writes knowledge in; stored on each session / answer.
 // Marathi interface coverage is PARTIAL (navigation and the Detective, Stress Test, Radar and Ask surfaces); untranslated
 // strings fall back to English. Translations were written for this project and still need native-speaker review
-// (docs/MULTILINGUAL.md). Only languages this project has tested are offered.
+// (docs/EVALUATION.md). Only languages this project has tested are offered.
 import { state, esc } from "./core.js";
 
 export const LANGS = [

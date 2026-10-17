@@ -1,5 +1,5 @@
 // KNOWLEDGE LOSS RADAR: for each workflow, what is at risk, what records say so, and what to do next.
-// Status comes from explicit rules over real records (docs/RADAR.md). There is no score, ranking or prediction, and when
+// Status comes from explicit rules over real records. There is no score, ranking or prediction, and when
 // there are not enough records the status says "insufficient evidence" instead of guessing.
 import { requestButton } from "./access.js";
 import { api, esc, render, toast, isSample } from "../core.js";

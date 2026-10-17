@@ -29,10 +29,10 @@ export function apprenticeView(r) {
   if (r.id && (!attempt || attempt.id !== r.id)) { api("GET", `/api/attempts/${r.id}`).then((a) => { attempt = a; render(); }).catch((e) => toast(e.message, true)); }
   if (lessons.rows.some((l) => l.generating)) poll(`lessons-${w.id}`, async () => { await load(w.id); return lessons.rows.some((l) => l.generating); }, 2000);
   const living = isLiving();
-  return `<div class="page-head"><div><div class="eyebrow">${esc(w.name)}</div><h1>${living ? "Learning" : "Lessons"}</h1><p>You'll meet situations you haven't seen before. I won't tell you the answer. I'll help you notice what ${living ? "your teacher" : "an experienced colleague"} would notice.</p></div>
+  return `<div class="page-head"><div><div class="eyebrow">${esc(w.name)}</div>${r.id ? `<h1>Practice case</h1>` : `<h2>Practice cases and Ask</h2>`}<p>You'll meet situations you haven't seen before. I won't tell you the answer. I'll help you notice what ${living ? "your teacher" : "an experienced colleague"} would notice.</p></div>
     ${living && state.workflows.length > 1 ? `<label class="field" style="min-width:220px">Skill<select id="lv-learn-skill">${state.workflows.map((x) => `<option value="${x.id}" ${x.id === w.id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select></label>` : ""}</div>
   <div class="apprentice-grid">
-    <div class="stack"><aside class="card pad"><div class="eyebrow">${living ? "Shared with you" : "Lessons from approved expertise"}</div>
+    <div class="stack"><aside class="card pad"><div class="eyebrow">${living ? "Practice cases shared with you" : "Practice cases from approved knowledge"}</div>
       ${lessons.rows.map((l) => `<div class="lesson"><b>${esc(l.judgment.title)}</b><span class="small muted">taught by ${esc(l.judgment.expertName)}</span>
         ${l.judgment.restricted ? `<span class="tag amber" title="${esc(l.judgment.restrictionNote)}">${icon("shield", 11)} restricted${l.judgment.restrictionNote ? `: ${esc(l.judgment.restrictionNote)}` : ""}</span>` : ""}
         ${l.awaitingReview ? `<span class="small muted">Practice cases are drafted and awaiting the expert's review.</span>` : ""}
@@ -40,7 +40,7 @@ export function apprenticeView(r) {
         ${l.scenarios.map((s, i) => `<button class="card lesson-step" data-act="open" data-id="${s.id}" aria-current="${attempt?.scenario?.id === s.id}">
           <span class="small"><b>${i + 1}. ${esc(KIND[s.kind]?.[0] ?? "Case")}</b></span><span class="small muted" style="grid-column:1/3">${esc(s.title)}</span>
           <span style="grid-row:1/3;grid-column:3">${s.attempt?.result ? (s.attempt.result.finalCorrect ? icon("validate", 18, "reached the expected decision") : `<span role="img" aria-label="did not reach the expected decision">✗</span>`) : s.attempt ? icon("clock", 16, "in progress") : ""}</span></button>`).join("")}
-      </div>`).join("") || (living ? `<div style="margin-top:8px"><p class="small muted">Nothing has been shared with you yet.</p>${askToShareBlock()}</div>` : `<p class="small muted" style="margin-top:8px">No approved knowledge to learn yet.</p>`)}
+      </div>`).join("") || (living ? `<div style="margin-top:8px"><p class="small muted">Nothing has been shared with you yet.</p>${askToShareBlock()}</div>` : `<p class="small muted" style="margin-top:8px">No practice cases yet. Use the Work Maps above to practise with Moti.</p>`)}
     </aside>
     ${askPanel()}</div>
     <section class="card pad">${attempt ? attemptView(attempt) : `<div class="empty">${orb("teaching", 96)}<p>Pick a lesson to begin.</p></div>`}</section>

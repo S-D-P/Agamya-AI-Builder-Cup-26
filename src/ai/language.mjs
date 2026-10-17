@@ -1,6 +1,6 @@
 // Language layer shared by both experiences. Gemini reasons over the original language directly (no translate-then-
 // reason pipeline); this module only decides WHICH language to use and tells the model how to treat wording.
-// "tested" means covered by this project's evaluation (docs/MULTILINGUAL.md), not a promise of perfect understanding.
+// "tested" means covered by this project's evaluation (docs/EVALUATION.md), not a promise of perfect understanding.
 
 export const LANGUAGES = {
   en: { name: "English", native: "English", script: "Latin", tested: true },

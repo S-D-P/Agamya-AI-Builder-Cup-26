@@ -1,79 +1,53 @@
-# Evaluation on public data
+# Evaluation
 
-Two evaluations on public datasets, chosen to test two of the Apprentice Test questions: **can the expert trust it** (personal data) and **does Moti understand what it saw, without inventing anything** (the Work Map). Both are reproducible. The datasets are not redistributed: download them into `data/public/` (gitignored), then run the scripts. Results are versioned in `data/`.
+Measured on public data and on the live app. Raw results are in `data/`. The datasets are not in the repo: download them into `data/public/` (see each script's header).
 
-## 1. Personal-data masking (trust)
+## 1. Personal data is masked before storage
 
-**Data.** [ai4privacy/pii-masking-200k](https://huggingface.co/datasets/ai4privacy/pii-masking-200k), English file (43,501 labelled sentences), used under its free licence for evaluation.
+**Data:** [ai4privacy/pii-masking-200k](https://huggingface.co/datasets/ai4privacy/pii-masking-200k), English, 43,501 labelled sentences. **Run:** `npm run eval:redaction`
 
-**What is measured.** For each type the redactor targets: was the labelled value removed? For values that must stay readable at work (amounts, dates, times, building numbers, zip codes): was the value changed (over-masking)?
-
-```
-curl -L -o data/public/ai4privacy-english.jsonl https://huggingface.co/datasets/ai4privacy/pii-masking-200k/resolve/main/english_pii_43k.jsonl
-node scripts/eval-redaction.mjs        # → data/eval-redaction.json (deterministic, about 10 s, no AI)
-```
-
-| Type | Labelled | Before evaluation | After fixes |
-|---|---:|---:|---:|
-| Email | 4,092 | 100% | **100%** |
-| IBAN | 1,973 | 99.9% | **99.9%** |
-| National id (US SSN and similar) | 2,045 | 53.2% | **99.9%** |
-| Phone number | 2,425 | 46.0% | **94.6%** |
-| Card number, Luhn-valid | 266 | 100% | **100%** |
-| Card number, all labelled | 2,574 | 10.4% | 10.4% (see below) |
-
-| Must stay readable | Changed |
+| Type | Masked |
 |---|---:|
-| Amounts, dates, times, ages | 0% |
-| Building numbers / zip codes | 0.3% / 0.9% |
+| Email | 100% |
+| IBAN | 99.9% |
+| National ID (SSN and similar) | 99.9% |
+| Phone number | 94.6% |
+| Card number (valid) | 100% |
+| **Kept readable:** amounts, dates, times | 0% changed |
 
-**What the evaluation changed.**
-- Phone numbers written with dots (`+234 693-143.6710`) and national ids glued to a label (`SSN132-65-3444`) or with dots (`756.2808.9893`) were missed. The patterns now cover them.
-- The spot check that came with this showed a real problem for the Work use case. Plain 10–11 digit **business numbers** (PO 4500012345, transaction 20231015001) were being masked as phone numbers. A plain digit run is now treated as a phone number only if it starts with `+` or is an Indian mobile number. All of these cases are now unit tests.
+The evaluation found two gaps, which are now fixed and tested:
+- **Missed formats:** phone numbers and IDs written with dots were missed.
+- **Business numbers:** PO and transaction numbers were being masked as phone numbers. They now stay readable.
 
-**Honest reading.**
-- Most card numbers in this synthetic dataset fail the Luhn checksum, which every real card number passes. The redactor deliberately masks only Luhn-valid numbers so that invoice and account references stay readable. It catches 100% of the Luhn-valid ones.
-- The remaining phone misses are unusual mixed-separator formats (`09 37.71.60-04`).
-- Names, addresses and free-text identifiers are **not** detected. This is pattern masking, not a guarantee. Off the record and per-moment deletion remain the primary controls.
+The redactor does not detect names or addresses. Consent, "off the record" and deleting a moment remain the main controls.
 
-## 2. Work Map grounding (understanding without invention)
+## 2. Work Maps stick to what was shown and said
 
-**Data.** [YouCook2](http://youcook2.eecs.umich.edu/) validation annotations (via the `lmms-eval/YouCook2` mirror). These are real YouTube cooking videos with human-annotated, timestamped procedure steps. Each annotated step becomes a timestamped camera event, as Agamya's capture would record it. The first 25 recipes with at least 5 steps are used, in two conditions:
-- **silent:** the cook says nothing, so every reason must be labelled AI-inferred and any quote the model claims is unsupported.
-- **narrated:** the cook says each step aloud ("Now I …"); quotes must verify verbatim against that speech.
+**Data:** [YouCook2](http://youcook2.eecs.umich.edu/) validation set: 25 real recipes, 212 human-annotated steps, each step given to Agamya as a camera event.
 
-**What is measured.** All checks are deterministic, with no LLM judge:
-- coverage of the annotated steps;
-- cited evidence that does not exist (invented event ids), before verification;
-- step order;
-- quotes claimed versus verified;
-- the number of "still unclear" questions.
+**Run:** `npm run eval:workmap` (50 Gemini calls, $0.23 in total).
 
-```
-curl -L -o data/public/youcook2-val.parquet https://huggingface.co/datasets/lmms-eval/YouCook2/resolve/main/data/val-00000-of-00001.parquet
-python scripts/youcook2-to-json.py     # needs pyarrow
-node scripts/eval-workmap.mjs 25       # → data/eval-workmap.json (live Gemini 2.5 Flash, about 50 calls)
-```
-
-**Results** (25 recipes, 212 annotated steps, both conditions, run 2026-10-16, 50 calls, $0.23, 0 failed):
-
-| | Silent | Narrated |
+| | Cook silent | Cook narrating |
 |---|---:|---:|
-| Annotated steps covered by the map | 100% | 100% |
-| Map steps / annotated steps | 179 / 212 | 211 / 212 |
-| Cited evidence that does not exist (of 424 citations, before verification) | 0% | 0% |
-| Steps in the order they happened | 100% | 100% |
-| Quotes claimed by the model → verified | 1 → 0 | 3 → 3 |
-| Maps listing 3+ open questions | 25/25 | 23/25 |
+| Annotated steps covered | 100% | 100% |
+| Invented evidence (made-up event ids) | 0% | 0% |
+| Steps in the right order | 100% | 100% |
+| Quotes claimed → verified | 1 → 0 | 3 → 3 |
 
-**Honest reading.**
-- With the cook silent, the model claimed **one** quote. It did not appear in anything said, so the deterministic check removed it and the reason shows as AI-inferred. Every narrated quote verified. This is the guarantee that matters: *no reason is shown as the expert's words unless they said them*.
-- Each map listed what it did not know (why a step is done, quantities, signals). That gives the debrief its questions.
-- The events here are human-written step descriptions. That is easier than perceiving raw frames, so coverage and order measure the **map builder**, not frame perception. Frame understanding is exercised in live sessions ([LIVE_MOTI](LIVE_MOTI.md)).
-- YouCook2 has no "why" annotations, so this does not measure the quality of reasons, only that none are invented.
+The one quote nobody said was caught and labelled AI-inferred. **No reason is shown as the expert's words unless they said them.**
 
-## Not evaluated yet
+## 3. The live app (October 2026)
 
-- **When to ask.** There is no public dataset of "good moments to interrupt an expert". This is measured in live sessions instead (see [LIVE_MOTI](LIVE_MOTI.md)).
-- **Learner outcomes.** Practice results are labelled as practice, not certification.
-- **Web-task traces** (Mind2Web / WebArena) would test screen capture of software work. They are too large for this round.
+| Check | Result |
+|---|---|
+| Moti asks after the expert pauses | about 2 s (English, Marathi, Hindi, Kannada) |
+| Tutor stops a wrong decision (Hindi, Kannada, English) | about 1.6 s, at the right step |
+| Agent on Vertex AI Agent Engine, "post ₹88,000 invoice" | STOP, quoting the expert |
+| End-to-end on the deployed app (22 checks: capture → map → share → request → Ask → listen → agent → impact → passcode → removal) | 22 / 22 pass |
+| Automated tests | 176 / 176 pass |
+| Tested on iPhone (camera practice, voice) | works |
+
+## Not measured
+
+- **When to ask:** there is no public dataset for "the right moment to ask". It is checked in live sessions.
+- **Learning outcomes:** practice results are labelled practice, not certification.

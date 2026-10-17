@@ -88,7 +88,7 @@ function videoSection() {
   }
   return `<section class="video-section" aria-labelledby="vid-h"><h2 id="vid-h">See how Agamya works</h2>
     <div class="video-frame placeholder" role="note" aria-label="Product walkthrough video: coming soon, not yet playable">
-      <div class="video-ph-inner">${orb("observing", 72, { caption: false })}<p><b>Product walkthrough coming soon</b></p><p class="small muted">There is no video here yet, so there is nothing to play. Until then, open a sample space above to see the real product.</p></div>
+      <div class="video-ph-inner">${orb("observing", 72, { caption: false })}<p><b>Product walkthrough coming soon</b></p><p class="small muted">There is no video here yet, so there is nothing to play. Until then, sign in with a judge account (see the sign-in page) to try the real product.</p></div>
     </div></section>`;
 }
 

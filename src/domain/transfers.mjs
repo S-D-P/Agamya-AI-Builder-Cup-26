@@ -274,7 +274,7 @@ export function createTransfers({ db, capture }) {
         out.push({ workflow: wf, status, findings, facts: { documents: docs.docs, procedures: docs.procedures, sessions, experts: experts.length, learners: learners.length, approved: approved.length,
           holders: holders.size, privateApproved: approved.filter((j) => !j.visible).length } });
       }
-      return { workflows: out, rules: "See docs/RADAR.md. Status comes from rules over real records; there is no score and no prediction." };
+      return { workflows: out, rules: "Status comes from rules over real records; there is no score and no prediction." };
     });
   }
 

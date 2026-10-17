@@ -1,4 +1,4 @@
--- 001: core schema. See docs/DATA_MODEL.md for the rationale behind each table.
+-- 001: core schema.
 -- Conventions: uuid primary keys (gen_random_uuid), timestamptz everywhere, org_id on every tenant-owned row,
 -- soft deletion (deleted_at) where users can delete and history matters, `version` for optimistic concurrency.
 

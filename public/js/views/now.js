@@ -117,7 +117,7 @@ export function mapView(r) {
   const inDebrief = live && live.mode === "debrief";
   return shell(`<section class="map" aria-labelledby="map-h">
     <div class="map-head"><div><div class="eyebrow">Work Map · v${m.version} · ${esc(m.expertName)}</div><h1 id="map-h">${esc(m.title)}</h1>
-      <p class="muted">${m.counts.steps} steps · ${m.counts.judgments} judgment calls · ${m.counts.guardrails} guardrails · ${m.status === "confirmed" ? "confirmed by the expert" : "not yet confirmed"}</p></div>
+      <p class="muted">${plural(m.counts.steps, "step")} · ${plural(m.counts.judgments, "judgment call")} · ${plural(m.counts.guardrails, "guardrail")} · ${m.status === "confirmed" ? "confirmed by the expert" : "not yet confirmed"}</p></div>
       <div class="row wrap">${m.status === "confirmed" ? `<a class="btn primary" href="#/practice/${m.sessionId}">Practise this</a><a class="btn" href="/api/maps/${m.sessionId}/export" download>Export for agents</a>` : ""}</div></div>
     ${m.mine && m.status !== "confirmed" ? `<div class="map-debrief">${inDebrief ? `${conversation()}${typeBox()}<div class="row"><button class="primary sm" data-act="map-debrief-done">Finish the debrief</button></div>`
       : `<p>${m.unclear.length ? `Moti still has ${m.unclear.length} question${m.unclear.length === 1 ? "" : "s"}. ${voiceReady() ? "A short spoken debrief ends with Moti explaining it all back to you." : "Answer them in a short typed debrief."}` : "Moti can explain the whole process back to you to check it understood."}</p>
@@ -131,13 +131,17 @@ export function mapView(r) {
   </section>`, { dark: false });
 }
 
+// The observation text ends with machine-readable readings in [brackets]: show only the human sentence.
+const momentLabel = (t) => { const x = String(t ?? "").replace(/\s*\[[\s\S]*$/, "").trim(); return x ? (x.length > 160 ? `${x.slice(0, 157)}…` : x) : "Show the moment"; };
+const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
 function step(s, i, n) {
   const mo = s.moments?.[0];
   const KIND = { limit: "Limit", exception: "Exception", stop_and_ask: "Stop and ask", never: "Never" };
   return `<li class="map-step ${s.isJudgment ? "judgment" : ""}"><div class="map-num" aria-hidden="true">${i + 1}</div><div class="map-body">
     <div class="eyebrow">Step ${i + 1} of ${n}${s.isJudgment ? " · judgment call" : ""}${mo?.offsetSec != null ? ` · ${Math.floor(mo.offsetSec / 60)}:${String(mo.offsetSec % 60).padStart(2, "0")}` : ""}</div>
     <h2 class="h3">${esc(s.title)}</h2>
-    <dl class="kv left small"><dt>Screen moment</dt><dd>${mo ? `<details><summary>${esc(mo.text || "Show the moment")}</summary>${mo.mediaId ? `<img src="/api/media/${mo.mediaId}" alt="The expert's screen at this step: ${esc(mo.text || s.title)}" loading="lazy" class="map-frame">` : ""}</details>` : "Not linked"}</dd>
+    <dl class="kv left small"><dt>Screen moment</dt><dd>${mo ? `<details><summary>${esc(momentLabel(mo.text))}</summary>${mo.mediaId ? `<img src="/api/media/${mo.mediaId}" alt="The expert's screen at this step: ${esc(momentLabel(mo.text) || s.title)}" loading="lazy" class="map-frame">` : ""}</details>` : "Not linked"}</dd>
       <dt>Decision</dt><dd>${esc(s.decision || s.action)}</dd>
       <dt>Reason</dt><dd>${s.reason?.text ? `${esc(s.reason.text)}${s.reason.quote ? `<blockquote class="quote">“${esc(s.reason.quote)}”${s.reason.quoteEn && s.reason.quoteEn !== s.reason.quote ? `<span class="small muted"> · English: ${esc(s.reason.quoteEn)}</span>` : ""}</blockquote>` : ` <span class="tag">AI-inferred, not said by the expert</span>`}` : `<span class="muted">Not explained</span>`}</dd>
       <dt>Guardrails</dt><dd>${s.guardrails.length ? `<ul class="plain">${s.guardrails.map((g) => `<li><b>${KIND[g.kind] ?? g.kind}:</b> ${esc(g.text)}${g.quote ? ` <span class="small muted">“${esc(g.quote)}”</span>` : ` <span class="tag">AI-inferred</span>`}</li>`).join("")}</ul>` : `<span class="muted">None recorded</span>`}</dd></dl>
