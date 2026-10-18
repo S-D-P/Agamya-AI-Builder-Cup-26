@@ -9,3 +9,11 @@ data/*
 !data/adversarial.json
 *.log
 agents/
+*.MOV
+*.mov
+*.mp4
+*.pptx
+*.pdf
+docs/
+tests/
+scripts/
