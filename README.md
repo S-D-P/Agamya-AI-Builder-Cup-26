@@ -11,7 +11,7 @@ Agamya captures the judgment experts carry in their heads and hands, and passes 
 | **Live app** | https://agamya-82538920788.us-central1.run.app |
 | **Judges' guide** (every feature, with screenshots) | [docs/JUDGES_GUIDE.md](docs/JUDGES_GUIDE.md) |
 | **Demo video** | *link* |
-| **Work demo video** (a JMeter knowledge transfer) | *link* |
+| **Full, uncut demos** (Culture · Work · Learner, with subtitles) | *links* |
 | **Our inspiration** (the story behind Agamya, with sources) | https://agamya-82538920788.us-central1.run.app/#/inspiration |
 | **Pitch deck** | [PDF](docs/submission/Agamya-Submission-Deck.pdf) · [PPTX](docs/submission/Agamya-Submission-Deck.pptx) · [sources](docs/submission/RESEARCH_LEDGER.md) |
 
