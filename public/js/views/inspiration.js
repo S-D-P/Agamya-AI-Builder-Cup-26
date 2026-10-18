@@ -30,7 +30,7 @@ const CHAPTERS = [
   { id: "work", panel: 4, accent: "indigo", place: "Your office", native: null, title: "The expert at the next desk",
     body: `<p>The same thing happens every month in ordinary companies. In a 2018 Panopto survey, 42% of institutional knowledge was unique to the employee in their role, so colleagues cannot do that part of the job when they are away. ${cite(7)}</p>
       <p>It is rarely the steps. It is the reason: <q>anything over fifty thousand I hold for the controller, because last year a duplicate went out.</q> The philosopher Michael Polanyi put it simply: <q>we can know more than we can tell.</q> ${cite(8)}</p>` },
-  { id: "ai", panel: 5, accent: "crimson", place: "Agamya", native: ["अगम्य", "sa", "Agamya: hard to reach, in Sanskrit"], title: "A different use of AI",
+  { id: "ai", panel: 0, accent: "crimson", place: "Agamya", native: ["अगम्य", "sa", "Agamya: hard to reach, in Sanskrit"], title: "A different use of AI",
     body: `<p>Most AI tries to replace the expert, or to guess. Agamya does the opposite. It <b>asks</b>. While the expert works, Moti watches, listens and asks one short question at a natural pause: why that, why now?</p>
       <ul><li>Every reason is kept <b>in the expert's own words</b>, checked word for word. Anything else is labelled AI-inferred.</li>
         <li>The expert <b>confirms</b> the map and chooses who learns from it.</li>
@@ -67,7 +67,12 @@ export function inspirationView() {
       <ol>${REFS.map(([t, u], i) => `<li id="ins-ref-${i + 1}">${u ? `<a href="${u}" target="_blank" rel="noopener noreferrer">${t}</a>` : t}</li>`).join("")}</ol>
       <p class="small muted">Accessed 18 October 2026. Figures are quoted as each source reports them.</p>
     </section>
-  </main></div>`;
+  </main>
+  <footer class="ins-foot">
+    <p>Developed with <span aria-hidden="true">♥</span><span class="sr-only">love</span> from Mumbai, India</p>
+    <p class="small">By <a href="https://www.linkedin.com/in/siddhi-pandirkar-2ab080203/" target="_blank" rel="noopener noreferrer">Siddhi Pandirkar</a>
+      and <a href="https://www.linkedin.com/in/sumit-jadhav-733377214/" target="_blank" rel="noopener noreferrer">Sumit Jadhav</a> <span class="muted">(LinkedIn)</span></p>
+  </footer></div>`;
 }
 
 /** In-page links must not change the hash: the hash is the router. */

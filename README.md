@@ -74,7 +74,7 @@ Details: [Architecture](docs/ARCHITECTURE.md) · [AI agents](docs/AGENTS.md) · 
 
 ## Evidence
 
-- **Tests:** 176 automated tests pass. All 22 end-to-end checks pass on the live app. Tested on iPhone.
+- **Tests:** 177 automated tests pass. All 22 end-to-end checks pass on the live app. Tested on iPhone.
 - **Work Maps on 25 real recipes (YouCook2):** 100% of steps covered, no invented evidence, and every unspoken quote caught.
 - **Personal data masked before storage:** email 100%, IBAN 99.9%, ID 99.9%, phone 94.6%.
 - **Speed:** Moti asks about 2 s after the expert pauses, and the tutor stops a mistake in about 1.6 s.
@@ -89,7 +89,7 @@ Details: [Evaluation](docs/EVALUATION.md)
 npm install
 cp .env.example .env     # set GOOGLE_CLOUD_PROJECT, then: gcloud auth application-default login
 npm start                # http://localhost:3200
-npm test                 # 176 tests
+npm test                 # 177 tests
 npm run deploy           # Cloud Run (PROJECT=<your-project>)
 ```
 

@@ -713,3 +713,8 @@ input[aria-invalid="true"] { border-color: #b83a2f; }
 .lp-demos a { display: grid; gap: 4px; height: 100%; box-sizing: border-box; padding: 14px 16px; border: 1px solid var(--lp-line, var(--line)); border-radius: 14px; background: #fffaf2; color: var(--lp-ink, var(--ink)); text-decoration: none; }
 .lp-demos a:hover { border-color: var(--lp-gold, var(--line-2)); }
 .lp-demos-open { color: var(--lp-indigo, var(--ink)); font-weight: 600; margin-top: 4px; }
+.ins-foot { border-top: 1px solid var(--lp-line); padding: 28px 16px 40px; text-align: center; display: grid; gap: 6px; color: var(--lp-ink); }
+.ins-foot p { margin: 0; }
+.ins-foot p:first-child { font-family: var(--display); font-size: 18px; }
+.ins-foot span[aria-hidden] { color: var(--lp-crimson); }
+.ins-foot a { color: var(--lp-indigo); font-weight: 600; }

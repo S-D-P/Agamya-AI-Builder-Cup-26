@@ -328,10 +328,14 @@ export function createIdentity({ db, cfg }) {
       });
     },
 
-    async acceptInvite({ token, displayName, password, ip, ua, requestId }) {
+    async acceptInvite({ token, email, displayName, password, ip, ua, requestId }) {
       return db.system(async (q) => {
         const [inv] = await q("SELECT * FROM invitations WHERE token_hash = $1 AND status = 'pending' AND accepted_at IS NULL AND expires_at > now()", [sha256(String(token ?? ""))]);
         if (!inv) throw httpError(404, "invitation is invalid or expired");
+        // The person joining types the email the admin invited; any other email is refused (the space is only for that email).
+        if (email !== undefined && String(email).trim().toLowerCase() !== String(inv.email).toLowerCase()) {
+          throw httpError(403, "this invitation is only for the email the admin entered. Use that exact email, or ask the admin to invite the email you use");
+        }
         let [user] = await q("SELECT * FROM users WHERE lower(email) = $1", [inv.email]);
         // An existing account must prove it is theirs: the link alone never signs anyone in to an existing account
         // (otherwise whoever held the link could enter that person's account and every space they belong to).

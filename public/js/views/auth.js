@@ -176,6 +176,7 @@ function inviteCard(token) {
   const i = inviteInfo;
   return `<h1>Join ${esc(i.spaceName)}</h1>
     <p class="muted">${i.invitedBy ? `${esc(i.invitedBy)} invited` : "You were invited as"} <b>${esc(i.email)}</b>.</p>
+    <label class="field" for="in-email">Email (the one you were invited with)<input id="in-email" data-draft="in-email" type="email" autocomplete="email" required aria-required="true" ${invalid("invite", "email")}></label>
     ${i.hasAccount
       ? `<p class="callout small">You already have an Agamya account with this email. Enter <b>your own Agamya password</b> (the one you sign in with) to add this space to your account. There is no separate password for a space.</p>
          <label class="field">Your Agamya password<input data-draft="in-pw" type="password" autocomplete="current-password"></label>`
@@ -213,7 +214,15 @@ export async function authClick(e) {
   }
   if (a === "signup" && !checkEmail("signup", draft("su-email"))) return;
   if (a === "signup") return act("signup", () => authCall("signup", async () => { await api("POST", "/api/auth/signup", { orgName: draft("su-org"), displayName: draft("su-name"), email: draft("su-email"), password: state.drafts["su-pw"] ?? "", experience: spaceType }); state.drafts["su-pw"] = ""; await finishLogin("#/"); location.reload(); }));
-  if (a === "accept-invite") return act("invite", () => authCall("invite", async () => { await api("POST", "/api/auth/accept-invite", { token: t.dataset.token, displayName: draft("in-name"), password: state.drafts["in-pw"] ?? "" }); await finishLogin(); location.reload(); }, "pw"));
+  if (a === "accept-invite") {
+    const typed = String(draft("in-email") ?? "").trim();
+    if (!typed) { authError = { form: "invite", field: "email", message: "Enter the email address you were invited with." }; render(); return document.getElementById("in-email")?.focus(); }
+    if (inviteInfo?.email && typed.toLowerCase() !== inviteInfo.email.toLowerCase()) {
+      authError = { form: "invite", field: "email", message: `This invitation is only for ${inviteInfo.email}. Use that exact email, or ask the admin to invite the email you use.` };
+      render(); return document.getElementById("in-email")?.focus();
+    }
+    return act("invite", () => authCall("invite", async () => { await api("POST", "/api/auth/accept-invite", { token: t.dataset.token, email: typed, displayName: draft("in-name"), password: state.drafts["in-pw"] ?? "" }); await finishLogin(); location.reload(); }, "pw"));
+  }
 }
 
 // ---------------------------------------------------------------- policies gate

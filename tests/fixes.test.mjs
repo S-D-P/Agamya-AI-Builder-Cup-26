@@ -37,6 +37,17 @@ test("fixes from user testing", { timeout: 180000 }, async (t) => {
       assert.equal((await user(h.app).post("/api/auth/accept-invite", { token, displayName: "Newbie", password: "a-long-new-password-1" })).status, 200);
     });
 
+    await t.test("only the invited email can join: a different email is refused with a reason", async () => {
+      const inv = (await owner.u.post("/api/admin/invitations", { email: "exact@f.test", roles: ["LEARNER"] })).body;
+      const token = inv.inviteUrl.split("/").pop();
+      const wrong = await user(h.app).post("/api/auth/accept-invite", { token, email: "someone.else@f.test", displayName: "X", password: "a-long-new-password-1" });
+      assert.equal(wrong.status, 403);
+      assert.match(wrong.body.error, /only for the email the admin entered/);
+      assert.equal((await user(h.app).post("/api/auth/invite-info", { token })).status, 200, "a refused attempt does not use up the invitation");
+      const right = await user(h.app).post("/api/auth/accept-invite", { token, email: " Exact@F.test ", displayName: "Exact", password: "a-long-new-password-1" });
+      assert.equal(right.status, 200, "the invited email joins (case and spaces ignored)");
+    });
+
     let sid;
     await t.test("recent sessions appear immediately with their status; terminate is final even if a job finishes later", async () => {
       const st = (await owner.u.post("/api/live/start", { kind: "screen", name: "KT of JMeter", language: "en" })).body;

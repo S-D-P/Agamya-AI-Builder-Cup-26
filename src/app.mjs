@@ -228,7 +228,7 @@ export async function buildServer(s) {
     });
   }
   app.post("/api/auth/invite-info", { ...S({ required: ["token"], properties: { token: { type: "string", maxLength: 100 } } }), config: { rateLimit: { max: 20, timeWindow: "15 minutes" } } }, async (req) => s.identity.inviteInfo(req.body.token));
-  app.post("/api/auth/accept-invite", { ...S({ required: ["token"], properties: { token: { type: "string", maxLength: 100 }, displayName: { type: "string", maxLength: 80 }, password: { type: "string", maxLength: 256 } } }), config: { rateLimit: { max: 10, timeWindow: "15 minutes" } } }, async (req, reply) => {
+  app.post("/api/auth/accept-invite", { ...S({ required: ["token"], properties: { token: { type: "string", maxLength: 100 }, email: { type: "string", maxLength: 320 }, displayName: { type: "string", maxLength: 80 }, password: { type: "string", maxLength: 256 } } }), config: { rateLimit: { max: 10, timeWindow: "15 minutes" } } }, async (req, reply) => {
     const r = await s.identity.acceptInvite({ ...req.body, ...meta(req) });
     setSessionCookie(reply, r.token, r.expiresAt);
     return { ok: true, csrfToken: r.csrfToken };
