@@ -14,7 +14,7 @@ data/*
 *.MOV
 *.mov
 *.pptx
-!docs/**/*.pptx
+# (the editable deck is kept locally; only the PDF is published)
 submission-build/
 
 # Demo video: upload to YouTube; too large for the repository

@@ -13,7 +13,7 @@ Agamya captures the judgment experts carry in their heads and hands, and passes 
 | **Product demo video** (under 4 minutes) | [Watch on Google Drive](https://drive.google.com/file/d/1isA43mz_f_-Gx9qeJrtaiFC_V8UoQdHU/view?usp=sharing) |
 | **Full, uncut demos** (with subtitles) | [Culture mode](https://drive.google.com/file/d/1t4CVmkqMKETwBMcNXEBytm_ynuz3XpXw/view?usp=drive_link) · [Work mode](https://drive.google.com/file/d/1SbRbL3drKHkyTPlSQqNl1kiCey6IW5PT/view?usp=drive_link) · [Learner](https://drive.google.com/file/d/1aeFphfi6Vuk_5EqHKEcrx_-tiUh6_yn7/view?usp=drive_link) |
 | **Our inspiration** (the story behind Agamya, with sources) | https://agamya-82538920788.us-central1.run.app/#/inspiration |
-| **Pitch deck** | [PDF](docs/submission/Agamya-Submission-Deck.pdf) · [PPTX](docs/submission/Agamya-Submission-Deck.pptx) · [sources](docs/submission/RESEARCH_LEDGER.md) |
+| **Pitch deck** | [PDF](docs/submission/Agamya-Submission-Deck.pdf) · [sources](docs/submission/RESEARCH_LEDGER.md) |
 
 **Judge sign-in** (on the sign-in page, one click fills these in):
 
