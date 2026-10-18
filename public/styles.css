@@ -706,3 +706,10 @@ fieldset > legend { padding: 0; margin-bottom: 8px; }
 .auth-error { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--red-soft); color: #8a1f17; border: 1px solid #f0c4c0; font-weight: 600; font-size: 14px; }
 .auth-error:focus { outline: 3px solid #8a1f17; outline-offset: 2px; }
 input[aria-invalid="true"] { border-color: #b83a2f; }
+.video-frame.drive iframe { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; background: #111; }
+.landing.light .video-frame.drive { border-color: var(--lp-line); background: #fffaf2; }
+.lp-demos-h { margin: 22px 0 10px; font-size: 16px; }
+.lp-demos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 12px; }
+.lp-demos a { display: grid; gap: 4px; height: 100%; box-sizing: border-box; padding: 14px 16px; border: 1px solid var(--lp-line, var(--line)); border-radius: 14px; background: #fffaf2; color: var(--lp-ink, var(--ink)); text-decoration: none; }
+.lp-demos a:hover { border-color: var(--lp-gold, var(--line-2)); }
+.lp-demos-open { color: var(--lp-indigo, var(--ink)); font-weight: 600; margin-top: 4px; }

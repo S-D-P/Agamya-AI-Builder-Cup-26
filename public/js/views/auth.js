@@ -80,19 +80,26 @@ function landing() {
 </div>`;
 }
 
+// Demo videos, hosted on Google Drive (public). The product demo plays here in Drive's own player; the others open in Drive.
+const DRIVE = (id) => ({ view: `https://drive.google.com/file/d/${id}/view`, embed: `https://drive.google.com/file/d/${id}/preview` });
+const DEMOS = [
+  ["Product demo", "The whole cycle in under four minutes: capture, Work Map, sharing, and a learner practising with Moti.", DRIVE("1isA43mz_f_-Gx9qeJrtaiFC_V8UoQdHU")],
+  ["Culture mode demo", "Bharati teaches a Satara recipe in Marathi while Moti asks why. Uncut, with subtitles.", DRIVE("1t4CVmkqMKETwBMcNXEBytm_ynuz3XpXw")],
+  ["Work mode demo", "A JMeter knowledge transfer before maternity leave, on a shared screen. Uncut, with subtitles.", DRIVE("1SbRbL3drKHkyTPlSQqNl1kiCey6IW5PT")],
+  ["Learner demo", "Kiran listens to the lesson and practises with Moti as her tutor. Uncut, with subtitles.", DRIVE("1aeFphfi6Vuk_5EqHKEcrx_-tiUh6_yn7")],
+];
+
 function videoSection() {
   const v = config.demoVideo;
-  if (v?.url) {
-    return `<section class="video-section" aria-labelledby="vid-h"><h2 id="vid-h">${esc(v.title)}</h2>
-      <figure class="video-frame"><video controls preload="metadata" ${v.poster ? `poster="${esc(v.poster)}"` : ""} aria-describedby="vid-desc">
-        <source src="${esc(v.url)}">${v.captionsUrl ? `<track kind="captions" src="${esc(v.captionsUrl)}" srclang="en" label="English" default>` : ""}
-        Your browser cannot play this video.${v.transcriptUrl ? ` <a href="${esc(v.transcriptUrl)}">Read the transcript</a>.` : ""}</video>
-        <figcaption id="vid-desc" class="small muted">A walkthrough of capture, understanding, validation and transfer.${v.transcriptUrl ? ` <a href="${esc(v.transcriptUrl)}">Transcript</a>.` : ""}${v.captionsUrl ? "" : " Captions are not available for this video yet."}</figcaption></figure></section>`;
-  }
-  return `<section class="video-section" aria-labelledby="vid-h"><h2 id="vid-h">See how Agamya works</h2>
-    <div class="video-frame placeholder" role="note" aria-label="Product walkthrough video: coming soon, not yet playable">
-      <div class="video-ph-inner">${orb("observing", 72, { caption: false })}<p><b>Product walkthrough coming soon</b></p><p class="small muted">There is no video here yet, so there is nothing to play. Until then, sign in with a judge account (see the sign-in page) to try the real product.</p></div>
-    </div></section>`;
+  const player = v?.url
+    ? `<figure class="video-frame"><video controls preload="metadata" ${v.poster ? `poster="${esc(v.poster)}"` : ""}>
+        <source src="${esc(v.url)}">${v.captionsUrl ? `<track kind="captions" src="${esc(v.captionsUrl)}" srclang="en" label="English" default>` : ""}Your browser cannot play this video.</video></figure>`
+    : `<figure class="video-frame drive"><iframe src="${DEMOS[0][2].embed}" title="Agamya product demo video (Google Drive player, with subtitles)" allow="autoplay; fullscreen" allowfullscreen loading="lazy"></iframe>
+        <figcaption class="small muted">${esc(DEMOS[0][1])} <a href="${DEMOS[0][2].view}" target="_blank" rel="noopener noreferrer">Open in Google Drive</a>.</figcaption></figure>`;
+  return `<section class="video-section" aria-labelledby="vid-h"><h2 id="vid-h">See Agamya in use</h2>
+    ${player}
+    <h3 class="lp-demos-h">Full sessions, uncut</h3>
+    <ul class="lp-demos">${DEMOS.slice(1).map(([t, d, u]) => `<li><a href="${u.view}" target="_blank" rel="noopener noreferrer"><b>${esc(t)}</b><span class="small muted">${esc(d)}</span><span class="small lp-demos-open">Watch on Google Drive <span aria-hidden="true">↗</span></span></a></li>`).join("")}</ul></section>`;
 }
 
 // Sign-in, sign-up and invitation errors are shown on the page (not only as a toast), so a wrong password is never silent.

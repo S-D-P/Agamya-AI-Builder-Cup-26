@@ -5,10 +5,10 @@ import { brand } from "./auth.js";
 const REFS = [
   ["The Daily Star (2026). What Bengal made and let others claim.", "https://www.thedailystar.net/supplements-0/news/what-bengal-made-and-let-others-claim-4217271"],
   ["Wikipedia. Dhaka muslin.", "https://en.wikipedia.org/wiki/Dhaka_muslin"],
-  ["Chakravartty, A. (6 Sep 2013). Survey tracks down only speaker of Majhi in India. Down To Earth.", "https://www.downtoearth.org.in/amp/story/environment/survey-tracks-down-only-speaker-of-majhi-in-india-42123"],
-  ["Wikipedia. Majhi language.", "https://en.wikipedia.org/wiki/Majhi_language"],
   ["Garland Magazine (2026). Kimono and lacquerware sales down up to 90 per cent as Japan's craft base narrows (data: Association for the Promotion of Traditional Craft Industries).", "https://garlandmag.com/kimono-and-lacquerware-sales-down-up-to-90-per-cent-as-japans-craft-base-narrows/"],
   ["NPR / WFAE (29 Jul 2022). Japan's traditional crafts are struggling to survive the country's population decline.", "https://www.wfae.org/2022-07-29/japans-traditional-crafts-are-struggling-to-survive-the-countrys-population-decline"],
+  ["Chakravartty, A. (6 Sep 2013). Survey tracks down only speaker of Majhi in India. Down To Earth.", "https://www.downtoearth.org.in/amp/story/environment/survey-tracks-down-only-speaker-of-majhi-in-india-42123"],
+  ["Wikipedia. Majhi language.", "https://en.wikipedia.org/wiki/Majhi_language"],
   ["Panopto (2018). Workplace Knowledge and Productivity Report, reported by HR Dive.", "https://www.hrdive.com/news/inefficient-knowledge-sharing-costs-large-us-businesses-47m-a-year/527892/"],
   ["Polanyi, M. (1966). The Tacit Dimension.", null],
 ];
@@ -20,17 +20,17 @@ const CHAPTERS = [
     body: `<p>Dhaka muslin was among the finest cloths ever woven: yarn spun from a local cotton, <i>phuti karpas</i>, at thread counts reported up to about 1,200. ${cite(1, 2)}</p>
       <p>A story is often told that weavers' thumbs were cut off to end the craft. <b>We tell it as a legend</b>: it traces back to a 1772 account by the merchant William Bolts. ${cite(1)} The documented decline is plainer: tariffs on Bengal cloth in England, and cheap machine-made cotton flooding Bengal. ${cite(2)}</p>
       <p>Either way, the reasons a spinner wet the thread, or chose one morning over another, were never written down. The cotton itself is now considered lost. ${cite(1)}</p>` },
-  { id: "majhi", panel: 3, accent: "indigo", place: "Sikkim", native: ["माझी", "mjz", "Majhi, in Devanagari"], title: "Fifteen words for river",
-    body: `<p>In 2013 the People's Linguistic Survey of India traced the only known speaker of Majhi in India: Thak Bahadur Majhi, aged 80, in a village in Sikkim. ${cite(3)}</p>
-      <p>Majhi was the language of boatmen on the Teesta, with fifteen different words for river. As roads replaced the boats, the words went one after another. ${cite(3)} Majhi is still spoken in Nepal, where Nepali is steadily replacing it. ${cite(4)}</p>
-      <p>A word list survives a speaker. The knowing (which river word fits which water) does not.</p>` },
   { id: "japan", panel: 2, accent: "gold", place: "Japan", native: ["伝統的工芸品", "ja", "traditional craft products, in Japanese"], title: "Workshops without successors",
-    body: `<p>Japan's registered traditional-craft workforce fell from about 288,000 in 1979 to 48,334 in fiscal 2022, according to industry-association data reported by Garland Magazine. ${cite(5)}</p>
-      <p>In Kanazawa (<span lang="ja">金沢</span>), craft families have closed because no one took over, and the city now trains new craftspeople. ${cite(6)} A master can show an apprentice for years. When the years run out, so does the teaching.</p>` },
+    body: `<p>Japan's registered traditional-craft workforce fell from about 288,000 in 1979 to 48,334 in fiscal 2022, according to industry-association data reported by Garland Magazine. ${cite(3)}</p>
+      <p>In Kanazawa (<span lang="ja">金沢</span>), craft families have closed because no one took over, and the city now trains new craftspeople. ${cite(4)} A master can show an apprentice for years. When the years run out, so does the teaching.</p>` },
+  { id: "majhi", panel: 3, accent: "indigo", place: "Sikkim", native: ["माझी", "mjz", "Majhi, in Devanagari"], title: "Fifteen words for river",
+    body: `<p>In 2013 the People's Linguistic Survey of India traced the only known speaker of Majhi in India: Thak Bahadur Majhi, aged 80, in a village in Sikkim. ${cite(5)}</p>
+      <p>Majhi was the language of boatmen on the Teesta, with fifteen different words for river. As roads replaced the boats, the words went one after another. ${cite(5)} Majhi is still spoken in Nepal, where Nepali is steadily replacing it. ${cite(6)}</p>
+      <p>A word list survives a speaker. The knowing (which river word fits which water) does not.</p>` },
   { id: "work", panel: 4, accent: "indigo", place: "Your office", native: null, title: "The expert at the next desk",
     body: `<p>The same thing happens every month in ordinary companies. In a 2018 Panopto survey, 42% of institutional knowledge was unique to the employee in their role, so colleagues cannot do that part of the job when they are away. ${cite(7)}</p>
       <p>It is rarely the steps. It is the reason: <q>anything over fifty thousand I hold for the controller, because last year a duplicate went out.</q> The philosopher Michael Polanyi put it simply: <q>we can know more than we can tell.</q> ${cite(8)}</p>` },
-  { id: "ai", panel: 0, accent: "crimson", place: "Agamya", native: ["अगम्य", "sa", "Agamya: hard to reach, in Sanskrit"], title: "A different use of AI",
+  { id: "ai", panel: 5, accent: "crimson", place: "Agamya", native: ["अगम्य", "sa", "Agamya: hard to reach, in Sanskrit"], title: "A different use of AI",
     body: `<p>Most AI tries to replace the expert, or to guess. Agamya does the opposite. It <b>asks</b>. While the expert works, Moti watches, listens and asks one short question at a natural pause: why that, why now?</p>
       <ul><li>Every reason is kept <b>in the expert's own words</b>, checked word for word. Anything else is labelled AI-inferred.</li>
         <li>The expert <b>confirms</b> the map and chooses who learns from it.</li>

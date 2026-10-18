@@ -134,7 +134,7 @@ test("every route renders without axe violations, for each persona (Work and Liv
   const h = await harness();
   try {
     const ctx = await bootClient(h.app);
-    await t.test("signed out: landing (two modes, honest video placeholder), sign-in, sign-up", async () => {
+    await t.test("signed out: landing (two modes, demo videos), sign-in, sign-up", async () => {
       await settle(ctx.w);
       await axeCheck(ctx, "landing");
       const d = ctx.w.document;
@@ -144,8 +144,12 @@ test("every route renders without axe violations, for each persona (Work and Liv
       assert.equal(d.querySelectorAll(".lp-hero-crafts li").length, 6, "each of the six crafts is named in text, in order");
       assert.ok(art.getAttribute("width") && art.getAttribute("height"), "the image reserves its space (no layout shift)");
       assert.equal(d.querySelectorAll('[data-act="sample"]').length, 0, "no sample or demo entry points");
-      const ph = d.querySelector(".video-frame.placeholder");
-      assert.ok(ph && /coming soon/i.test(ph.textContent), "an honest placeholder when no video is configured");
+      const frame = d.querySelector(".video-frame.drive iframe");
+      assert.match(frame?.getAttribute("src") ?? "", /^https:\/\/drive\.google\.com\/file\/d\/[\w-]+\/preview$/, "the product demo plays in Google Drive's player");
+      assert.ok((frame?.getAttribute("title") ?? "").length > 10, "the embedded player has a descriptive title");
+      const demos = [...d.querySelectorAll(".lp-demos a")];
+      assert.equal(demos.length, 3, "Culture, Work and Learner demos are linked");
+      assert.ok(demos.every((a) => /^https:\/\/drive\.google\.com\//.test(a.href) && a.rel.includes("noopener")), "demo links open Drive safely");
       assert.equal(d.querySelectorAll(".video-section video, .video-section button").length, 0, "no dead play button, no fabricated video");
       await visit(ctx, "#/login");
       await axeCheck(ctx, "login");

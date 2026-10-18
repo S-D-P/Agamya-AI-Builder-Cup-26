@@ -114,7 +114,7 @@ export async function buildServer(s) {
       directives: {
         defaultSrc: ["'self'"], scriptSrc: ["'self'"], styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"], imgSrc: ["'self'", "data:", "blob:", "https://storage.googleapis.com"], mediaSrc: ["'self'", "blob:", "https://storage.googleapis.com", ...videoOrigins(cfg.demoVideo)],
-        connectSrc: ["'self'"], frameAncestors: ["'none'"], objectSrc: ["'none'"], baseUri: ["'self'"], formAction: ["'self'"],
+        connectSrc: ["'self'"], frameSrc: ["https://drive.google.com"], frameAncestors: ["'none'"], objectSrc: ["'none'"], baseUri: ["'self'"], formAction: ["'self'"],
         ...(cfg.auth.cookieSecure ? { upgradeInsecureRequests: [] } : {}),
       },
     },
