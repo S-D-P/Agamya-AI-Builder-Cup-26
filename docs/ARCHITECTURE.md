@@ -87,5 +87,5 @@ sequenceDiagram
 | `src/platform/` | Database, migrations, storage, security, redaction, jobs |
 | `public/` | The web app (plain JavaScript modules, no build step) |
 | `agents/guardrail_agent/` | The Google ADK agent and its Agent Engine deploy script |
-| `tests/` | 176 automated tests (real HTTP and PostgreSQL; Gemini scripted) |
+| `tests/` | 177 automated tests (real HTTP and PostgreSQL; Gemini scripted) |
 | `scripts/` | Deploy, evaluations, benchmarks |

@@ -19,7 +19,7 @@ Every outside fact used in the deck, the Inspiration page and the video. Accesse
 
 | Claim | Type | Where |
 |---|---|---|
-| 176/176 automated tests; 22/22 end-to-end on the live app | Measured | `npm test`, `scripts/` e2e |
+| 177/177 automated tests; 22/22 end-to-end on the live app | Measured | `npm test`, `scripts/` e2e |
 | Moti asks about 2 s after a pause; the tutor stops a mistake in about 1.6 s | Measured (small sample) | docs/EVALUATION.md |
 | YouCook2 (25 recipes, 212 steps): 100% coverage, 0% invented evidence, 100% order; 50 builds for $0.23 | Measured | docs/EVALUATION.md |
 | Masking (43,501 sentences): email 100%, IBAN 99.9%, ID 99.9%, phone 94.6% | Measured | docs/EVALUATION.md |

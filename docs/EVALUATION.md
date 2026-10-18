@@ -44,7 +44,7 @@ The one quote nobody said was caught and labelled AI-inferred. **No reason is sh
 | Tutor stops a wrong decision (Hindi, Kannada, English) | about 1.6 s, at the right step |
 | Agent on Vertex AI Agent Engine, "post ₹88,000 invoice" | STOP, quoting the expert |
 | End-to-end on the deployed app (22 checks: capture → map → share → request → Ask → listen → agent → impact → passcode → removal) | 22 / 22 pass |
-| Automated tests | 176 / 176 pass |
+| Automated tests | 177 / 177 pass |
 | Tested on iPhone (camera practice, voice) | works |
 
 ## Not measured
