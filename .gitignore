@@ -9,3 +9,13 @@ data/*
 !data/eval-workmap.json
 !data/eval/
 !data/storage-benchmark.json
+
+# Local presentation template and raw demo recordings (not part of the source)
+*.MOV
+*.mov
+*.pptx
+!docs/**/*.pptx
+submission-build/
+
+# Demo video: upload to YouTube; too large for the repository
+docs/submission/*.mp4

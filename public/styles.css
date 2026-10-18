@@ -654,3 +654,52 @@ fieldset > legend { padding: 0; margin-bottom: 8px; }
 .share fieldset > label.check { display: flex; font-weight: 600; }
 .share .sh-pick { margin-left: 26px; padding-left: 12px; border-left: 2px solid var(--line); }
 .now-flip { position: absolute; top: 12px; right: 12px; z-index: 2; background: rgba(0,0,0,.6); color: #fff; border-color: rgba(255,255,255,.5); }
+
+/* ===================================================================== our inspiration (public story page) */
+.ins { --ins-w: 1080px; }
+.ins .lp-top .btn { white-space: nowrap; }
+.ins-hero { max-width: 820px; margin: 0 auto; padding: clamp(36px, 7vw, 88px) 16px clamp(24px, 4vw, 40px); text-align: center; display: grid; gap: 16px; justify-items: center; }
+.ins-hero .eyebrow, .ins-ch .eyebrow { color: var(--lp-crimson); }
+.ins-hero h1 { font-size: clamp(34px, 5.4vw, 62px); line-height: 1.04; letter-spacing: -.03em; font-weight: 500; }
+.ins-hero h1 em { color: var(--lp-crimson); }
+.ins-lede { font-size: clamp(16px, 1.8vw, 19px); line-height: 1.6; color: var(--lp-muted); max-width: 58ch; margin: 0; }
+.ins-toc ol { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.ins-toc a { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--lp-line); border-radius: 999px; background: #fffaf2; color: var(--lp-ink); text-decoration: none; font-size: 14px; font-weight: 600; min-height: 44px; box-sizing: border-box; }
+.ins-toc a:hover { border-color: var(--lp-gold); }
+.ins-toc .n { font-family: var(--mono); font-size: 12px; color: #7d520c; }
+.ins-ch { max-width: var(--ins-w); margin: 0 auto; padding: clamp(28px, 5vw, 56px) clamp(16px, 4vw, 40px); display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(20px, 4vw, 56px); align-items: center; border-top: 1px solid var(--lp-line); scroll-margin-top: 72px; }
+.ins-ch:nth-of-type(even) .ins-panel { order: 2; }
+.ins-panel { aspect-ratio: 3 / 4; border-radius: 16px; background-image: url("/img/agamya-hero.webp"); background-size: 600% 100%; background-position: calc(var(--panel) * 20%) 50%; box-shadow: 0 24px 48px -28px rgba(60, 30, 10, .5); }
+.ins-text { display: grid; gap: 12px; max-width: 62ch; }
+.ins-text h2 { font-size: clamp(26px, 3.2vw, 40px); line-height: 1.1; font-weight: 500; letter-spacing: -.02em; }
+.ins-text h2:focus { outline: none; }
+.ins-text p, .ins-text li { font-size: 16.5px; line-height: 1.7; color: var(--lp-ink); margin: 0; }
+.ins-text ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.ins-text q { font-style: italic; }
+.ins-native { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.ins-native span[lang] { font-size: clamp(26px, 3vw, 34px); font-family: "Noto Serif", "Nirmala UI", "Yu Mincho", "Hiragino Mincho ProN", var(--display); color: var(--lp-indigo); }
+.ins-ch.crimson .ins-native span[lang] { color: var(--lp-crimson); } .ins-ch.gold .ins-native span[lang] { color: #7d520c; }
+.ins-cite { font-size: 12px; font-weight: 700; color: #7d520c; text-decoration: none; vertical-align: super; line-height: 0; padding: 0 1px; }
+.ins-cite:hover, .ins-cite:focus-visible { text-decoration: underline; }
+.ins-end { max-width: 820px; margin: 0 auto; padding: clamp(40px, 6vw, 72px) 16px; text-align: center; display: grid; gap: 18px; justify-items: center; border-top: 1px solid var(--lp-line); }
+.ins-end h2 { font-size: clamp(26px, 3.4vw, 40px); font-weight: 500; letter-spacing: -.02em; line-height: 1.12; }
+.ins-end .btn.work { background: var(--lp-indigo); border-color: var(--lp-indigo); color: #fff; }
+.ins-refs { max-width: var(--ins-w); margin: 0 auto; padding: 24px clamp(16px, 4vw, 40px) 64px; }
+.ins-refs h2 { font-size: 22px; font-weight: 500; }
+.ins-refs ol { margin: 12px 0; padding-left: 22px; display: grid; gap: 8px; font-size: 14px; line-height: 1.5; }
+.ins-refs li:target { background: #fbf1d9; border-radius: 6px; }
+.ins-refs a { color: var(--lp-indigo); overflow-wrap: anywhere; }
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .ins-ch { animation: ins-rise linear both; animation-timeline: view(); animation-range: entry 0% cover 30%; }
+  }
+}
+@keyframes ins-rise { from { opacity: .2; transform: translateY(28px); } to { opacity: 1; transform: none; } }
+@media (max-width: 760px) {
+  .ins-ch { grid-template-columns: minmax(0, 1fr); }
+  .ins-ch:nth-of-type(even) .ins-panel { order: 0; }
+  .ins-panel { aspect-ratio: 16 / 9; background-size: 600% auto; background-position: calc(var(--panel) * 20%) 40%; }
+  .ins .lp-top { gap: 6px; } .ins .lp-top .btn.ghost { padding: 8px 8px; }
+}
+@media (max-width: 560px) { .lp-top a[href="#/inspiration"] { display: none; } }
+.lp-story-link { color: var(--lp-crimson); font-weight: 600; font-size: 15px; text-decoration: underline; text-underline-offset: 3px; padding: 10px 4px; }

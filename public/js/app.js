@@ -27,6 +27,7 @@ import { missionsView, missionsClick, missionsChange, invalidateMissions } from 
 import { storageView, invalidateStorage } from "./views/storage.js";
 import { invalidateAsk } from "./views/ask.js";
 import { t, tp, uiLang, LANGS } from "./i18n.js";
+import { inspirationView, inspirationClick } from "./views/inspiration.js";
 import { announce } from "./a11y.js";
 import { startView, mapView, practiceView, nowClick, leaveNow, homeNow, invalidateNow, nowAfterRender, nowBusy } from "./views/now.js";
 const NOW = { start: startView, map: mapView, practice: practiceView };
@@ -125,6 +126,13 @@ let lastRoute = "";
 function draw() {
   const r = route();
   // The document stays lang="en": Marathi interface coverage is partial and translated strings carry lang="mr" themselves.
+  // The story page is public, signed in or not.
+  if (r.name === "inspiration") { if (lastRoute !== "inspiration/") {
+    const prev = lastRoute; lastRoute = "inspiration/";
+    if (prev.startsWith("session/")) leaveSession();
+    if (/^(start|map|practice)\//.test(prev)) leaveNow();
+    window.scrollTo(0, 0);
+  } root.innerHTML = inspirationView(); return; }
   if (!state.me) { root.innerHTML = authView(r); return; }
   if (state.me.policies?.pending?.length && r.name !== "policies") { go("#/policies"); return; }
   // Signed in without a space (e.g. every membership ended): show their invitations and how to create a space.
@@ -168,6 +176,7 @@ document.addEventListener("submit", (e) => { if (e.target.matches("[data-noop-su
 document.addEventListener("click", async (e) => {
   // The skip link must move focus, not change the hash (the hash is the router: "#main" would navigate away).
   if (e.target.closest(".skip-link")) { e.preventDefault(); const m = document.getElementById("main"); m?.focus(); m?.scrollIntoView(); return; }
+  if (inspirationClick(e)) return;
   if (e.target.closest('[data-act="logout"]')) return act("logout", async () => { await api("POST", "/api/auth/logout"); state.me = null; go("#/"); location.reload(); });
   if (!state.me) return authClick(e);
   if (await accessClick(e)) return;

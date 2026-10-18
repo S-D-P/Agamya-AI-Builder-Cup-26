@@ -38,7 +38,7 @@ function landing() {
     ["Transfer", "The next person practises on their own screen. Moti steps in before a wrong decision, in the expert's words. AI agents check the same guardrails."]];
   const work = config.allowSignup ? "#/signup/enterprise" : "#/login", culture = config.allowSignup ? "#/signup/personal" : "#/login";
   return `<div class="landing light">
-  <header class="lp-top">${brand()}<span class="spacer"></span><a class="btn ghost sm" href="#how-h" data-act="scroll-how">How it works</a><a class="btn sm" href="#/login">Sign in</a></header>
+  <header class="lp-top">${brand()}<span class="spacer"></span><a class="btn ghost sm" href="#/inspiration">Our inspiration</a><a class="btn ghost sm" href="#how-h" data-act="scroll-how">How it works</a><a class="btn sm" href="#/login">Sign in</a></header>
   <main id="main" class="lp-main" tabindex="-1">
     <section class="lp-hero" aria-labelledby="hero-h">
       <figure class="lp-hero-art">
@@ -50,6 +50,7 @@ function landing() {
         <h1 id="hero-h">Pass on what you know, without losing why.</h1>
         <p>From a dancer's footwork to a month-end payment run: Agamya watches an expert work, asks why at the right moment, and teaches the next person, and the next AI agent, to decide the same way.</p>
         <div class="row wrap hero-cta"><a class="btn primary lg work" href="${work}">Start with your screen</a><a class="btn lg culture" href="${culture}">Start with your camera</a></div>
+        <a class="lp-story-link" href="#/inspiration">Why we built Agamya: muslin, a last speaker, Japan's craft families →</a>
       </div>
     </section>
     ${config.judges?.length ? `<p class="lp-judges"><b>Judging?</b> Ready-made Work and Culture accounts are on the <a href="#/login">sign-in page</a>.</p>` : ""}

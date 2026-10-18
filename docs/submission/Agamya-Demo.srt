@@ -1,0 +1,163 @@
+1
+00:00:00,100 --> 00:00:08,311
+Bengal muslin was among the finest cloths ever woven. The cotton, and the skill, are gone.
+
+2
+00:00:08,611 --> 00:00:18,502
+In 2013, India's last known speaker of Majhi was eighty years old. His language had fifteen words for river.
+
+3
+00:00:18,802 --> 00:00:27,533
+Japan's registered craft workforce fell from about 288,000 to under 50,000.
+
+4
+00:00:27,833 --> 00:00:34,644
+And in every company, the reason behind a decision often lives in one person's head.
+
+5
+00:00:34,944 --> 00:00:41,215
+When an expert leaves, the why leaves with them. Agamya keeps it.
+
+6
+00:00:41,415 --> 00:00:42,215
+So this is my mother.
+
+7
+00:00:42,215 --> 00:00:50,415
+Today she is going to show us one of the most famous recipes from our native place, Satara.
+
+8
+00:00:50,415 --> 00:00:53,215
+Bharati (Marathi): Hello. Now we'll make a famous recipe from Satara.
+
+9
+00:00:54,015 --> 00:00:56,015
+Bharati: For that, we need peanuts.
+
+10
+00:00:56,415 --> 00:00:58,115
+Moti (Marathi): The peanuts are roasted, right?
+
+11
+00:00:58,115 --> 00:00:59,415
+Bharati: Yes, roast the peanuts.
+
+12
+00:00:59,415 --> 00:01:01,415
+Moti: How do you make sure the peanuts don't burn while roasting?
+
+13
+00:01:01,415 --> 00:01:03,915
+Bharati: Roast them on a low flame.
+
+14
+00:01:04,415 --> 00:01:06,415
+Moti: On a low flame they roast properly, right?
+
+15
+00:01:06,415 --> 00:01:07,415
+Bharati: Yes, they roast well.
+
+16
+00:01:07,415 --> 00:01:09,215
+Moti: How much should the onion be roasted?
+
+17
+00:01:09,415 --> 00:01:11,915
+Bharati: Until it turns reddish.
+
+18
+00:01:12,415 --> 00:01:13,415
+Moti: Until reddish, okay.
+
+19
+00:01:13,415 --> 00:01:14,415
+Bharati: Yes, then add red chilli powder.
+
+20
+00:01:14,415 --> 00:01:16,715
+You can see it is generated. You can play it.
+
+21
+00:01:16,815 --> 00:01:24,615
+Lesson (Marathi): First roast the peanuts. Roast them on a low flame so they don't burn.
+
+22
+00:01:24,615 --> 00:01:29,015
+From Kiran's account: Bharati's Kitchen shared the recipe with her.
+
+23
+00:01:29,415 --> 00:01:34,315
+She has access to all of this.
+
+24
+00:01:34,315 --> 00:01:39,215
+She can listen in Hindi, Marathi, Kannada: the language she prefers.
+
+25
+00:01:39,215 --> 00:01:41,715
+If everything is okay, export it for agents.
+
+26
+00:01:43,215 --> 00:01:50,615
+It creates a Work Map file with instructions for the whole recipe.
+
+27
+00:01:50,615 --> 00:01:53,215
+Now you can practise. Click Practise.
+
+28
+00:01:54,415 --> 00:01:57,915
+Start with your camera. Allow.
+
+29
+00:01:57,915 --> 00:02:02,515
+Moti: First, let's roast the peanuts. Remember to keep it on a low flame.
+
+30
+00:02:02,615 --> 00:02:04,115
+Moti: What should you do next?
+
+31
+00:02:04,215 --> 00:02:07,515
+Kiran: How long do I keep it on a low flame?
+
+32
+00:02:07,515 --> 00:02:10,015
+Moti: Sauté the onion until it turns a reddish colour.
+
+33
+00:02:10,015 --> 00:02:12,015
+Moti: What comes after the onions are sautéed?
+
+34
+00:02:12,515 --> 00:02:18,015
+Kiran: I think I add the peanuts to the sautéed onion.
+
+35
+00:02:19,515 --> 00:02:20,515
+Moti: That's exactly right.
+
+36
+00:02:20,515 --> 00:02:24,215
+Moti: Once the onion is reddish, add your spices and the crushed peanuts.
+
+37
+00:02:24,315 --> 00:02:32,686
+The same loop works at a desk. Moti watches an expert's screen, and asks why at the right moment.
+
+38
+00:02:32,986 --> 00:02:41,597
+The Work Map keeps every reason in the expert's own words, and labels anything the AI inferred.
+
+39
+00:02:41,897 --> 00:02:49,348
+A new hire practising in Hindi is stopped before posting a ₹72,000 invoice.
+
+40
+00:02:49,648 --> 00:02:57,339
+And AI agents ask the same map: would Asha stop here? The answer is: stop.
+
+41
+00:02:57,639 --> 00:03:16,430
+Built on Gemini Live, Gemini 2.5 Flash, Gemini TTS, Vertex AI Agent Engine and Cloud Run. Agamya. Show it once. Confirm it. Pass it on, without losing why.
