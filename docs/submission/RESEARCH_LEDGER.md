@@ -13,7 +13,7 @@ Every outside fact used in the deck, the Inspiration page and the video. Accesse
 | R7 | Japan's registered traditional-craft workforce fell from about 288,000 (1979) to 48,334 (FY2022), and production value from ¥541 billion (1983) to ¥105 billion. | Garland Magazine (2026), citing the Association for the Promotion of Traditional Craft Industries https://garlandmag.com/kimono-and-lacquerware-sales-down-up-to-90-per-cent-as-japans-craft-base-narrows/ | Secondary report of association data. We could not open the primary PDF. JapanCraft21's "90% lost by 2028" forecast is **not** used: Garland notes nothing corroborates it. |
 | R8 | In Kanazawa, craft families are closing for lack of successors, and the city government runs a training programme for new craftspeople. | NPR / WFAE, 29 Jul 2022 https://www.wfae.org/2022-07-29/japans-traditional-crafts-are-struggling-to-survive-the-countrys-population-decline | Journalism, not statistics. |
 | R9 | 42% of institutional knowledge is unique to the employee in their role. Large US companies lose about $47 million a year in productivity from inefficient knowledge sharing. | Panopto Workplace Knowledge and Productivity Report (2018), via HR Dive https://www.hrdive.com/news/inefficient-knowledge-sharing-costs-large-us-businesses-47m-a-year/527892/ | A vendor-commissioned survey. Quoted as Panopto's finding. |
-| R10 | "We can know more than we can tell." | Michael Polanyi, *The Tacit Dimension* (1966) | The quotation is under 15 words. |
+| R10 | "We can know more than we can tell." | Michael Polanyi, *The Tacit Dimension* (1966), University of Chicago Press https://press.uchicago.edu/ucp/books/book/chicago/T/bo6035368.html | The quotation is under 15 words. |
 
 ## Agamya's own numbers
 

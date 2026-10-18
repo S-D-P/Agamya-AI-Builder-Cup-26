@@ -10,7 +10,7 @@ const REFS = [
   ["Chakravartty, A. (6 Sep 2013). Survey tracks down only speaker of Majhi in India. Down To Earth.", "https://www.downtoearth.org.in/amp/story/environment/survey-tracks-down-only-speaker-of-majhi-in-india-42123"],
   ["Wikipedia. Majhi language.", "https://en.wikipedia.org/wiki/Majhi_language"],
   ["Panopto (2018). Workplace Knowledge and Productivity Report, reported by HR Dive.", "https://www.hrdive.com/news/inefficient-knowledge-sharing-costs-large-us-businesses-47m-a-year/527892/"],
-  ["Polanyi, M. (1966). The Tacit Dimension.", null],
+  ["Polanyi, M. (1966). The Tacit Dimension. University of Chicago Press.", "https://press.uchicago.edu/ucp/books/book/chicago/T/bo6035368.html"],
 ];
 const cite = (...n) => n.map((i) => `<a class="ins-cite" href="#ins-ref-${i}" aria-label="Source ${i}">[${i}]</a>`).join("");
 
@@ -70,8 +70,8 @@ export function inspirationView() {
   </main>
   <footer class="ins-foot">
     <p>Developed with <span aria-hidden="true">♥</span><span class="sr-only">love</span> from Mumbai, India</p>
-    <p class="small">By <a href="https://www.linkedin.com/in/siddhi-pandirkar-2ab080203/" target="_blank" rel="noopener noreferrer">Siddhi Pandirkar</a>
-      and <a href="https://www.linkedin.com/in/sumit-jadhav-733377214/" target="_blank" rel="noopener noreferrer">Sumit Jadhav</a> <span class="muted">(LinkedIn)</span></p>
+    <p class="small">By <a href="https://www.linkedin.com/in/sumit-jadhav-733377214/" target="_blank" rel="noopener noreferrer">Sumit Jadhav</a>
+      and <a href="https://www.linkedin.com/in/siddhi-pandirkar-2ab080203/" target="_blank" rel="noopener noreferrer">Siddhi Pandirkar</a></p>
   </footer></div>`;
 }
 
