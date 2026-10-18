@@ -703,3 +703,6 @@ fieldset > legend { padding: 0; margin-bottom: 8px; }
 }
 @media (max-width: 560px) { .lp-top a[href="#/inspiration"] { display: none; } }
 .lp-story-link { color: var(--lp-crimson); font-weight: 600; font-size: 15px; text-decoration: underline; text-underline-offset: 3px; padding: 10px 4px; }
+.auth-error { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--red-soft); color: #8a1f17; border: 1px solid #f0c4c0; font-weight: 600; font-size: 14px; }
+.auth-error:focus { outline: 3px solid #8a1f17; outline-offset: 2px; }
+input[aria-invalid="true"] { border-color: #b83a2f; }

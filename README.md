@@ -42,6 +42,14 @@ flowchart LR
    - They can listen to the lesson in 15 languages, or ask questions.
    - **AI agents** ask the same map "would the expert stop here?" through REST, MCP or a Google ADK agent.
 
+**In real use**
+
+| Work: a handover before leave | Culture: a recipe in Marathi | Practice with Moti |
+|---|---|---|
+| ![An expert shares her screen while Moti asks why](docs/images/real-work-expert.jpg) | ![Bharati cooks while Moti asks in Marathi](docs/images/real-culture-capture.jpg) | ![Kiran practises on camera with Moti as tutor](docs/images/real-practice.jpg) |
+
+**In the app**
+
 | Capture | Work Map | Practice | AI agent |
 |---|---|---|---|
 | ![](docs/images/05-live-capture.png) | ![](docs/images/07-work-map.png) | ![](docs/images/13-tutor-stops.png) | ![](docs/images/11-would-asha-stop.png) |
@@ -94,7 +102,7 @@ public/    web app (plain JavaScript, no build step)
 agents/    Google ADK Guardian agent + Agent Engine deploy
 tests/     automated tests
 scripts/   deploy, evaluations, benchmarks
-docs/      guides, architecture, evaluation, pitch content, images
+docs/      judges' guide, architecture, evaluation, security, pitch deck, images
 ```
 
 ## Limits
@@ -102,3 +110,7 @@ docs/      guides, architecture, evaluation, pitch content, images
 - Phones can't share their screen from a browser; use the camera there.
 - Narration in languages other than English, Hindi, Marathi and Kannada is not yet reviewed by native speakers.
 - A practice result shows practice, not certification.
+
+## License
+
+[MIT](LICENSE)

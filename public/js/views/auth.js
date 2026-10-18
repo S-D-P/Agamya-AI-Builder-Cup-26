@@ -16,7 +16,9 @@ export async function loadAuthConfig() { config = await api("GET", "/api/auth/co
 
 export const brand = (href = "#/") => `<a class="brand" href="${href}" aria-label="Agamya home"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 100 100">${pearl("bm", { still: true })}</svg></span><span class="brand-name">Agamya</span></a>`;
 
+let authRoute = "";
 export function authView(r) {
+  if (`${r.name}/${r.id ?? ""}` !== authRoute) { authRoute = `${r.name}/${r.id ?? ""}`; authError = null; } // a fresh page starts without an old error
   if (!config) { loadAuthConfig().then(render); return `<div class="landing"><span class="thinking" style="margin:40px">Loading</span></div>`; }
   if (r.name === "login") return page(loginCard());
   if (r.name === "signup") { if (r.id === "personal") spaceType = "living"; if (r.id === "enterprise") spaceType = "work"; return page(signupCard()); }
@@ -93,10 +95,37 @@ function videoSection() {
     </div></section>`;
 }
 
+// Sign-in, sign-up and invitation errors are shown on the page (not only as a toast), so a wrong password is never silent.
+let authError = null; // { form, message, field }
+const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/; // same rule as the server
+const errorBox = (form) => (authError?.form === form ? `<p class="auth-error" role="alert" tabindex="-1" id="${form}-error">${esc(authError.message)}</p>` : "");
+const invalid = (form, field) => (authError?.form === form && authError.field === field ? 'aria-invalid="true" aria-describedby="' + form + '-error"' : "");
+const sentence = (m) => { const t = String(m || "Something went wrong. Please try again.").replace(/^password: /, "Password: "); return t[0].toUpperCase() + t.slice(1) + (/[.!?]$/.test(t) ? "" : "."); };
+/** Run a sign-in style request; on failure show the reason on the page and move focus to it. */
+async function authCall(form, fn, field = null) {
+  authError = null;
+  try { await fn(); }
+  catch (e) {
+    const status = e?.status;
+    const message = form === "login" && status === 401 ? "The email or password is incorrect. Check both and try again."
+      : status === 429 ? sentence(e.message) : sentence(e.message);
+    authError = { form, message, field: field ?? (/password/i.test(message) ? "pw" : /email/i.test(message) ? "email" : null) };
+    state.busy = null; render();
+    document.getElementById(`${form}-error`)?.focus?.();
+  }
+}
+function checkEmail(form, value) {
+  if (EMAIL.test(String(value ?? "").trim())) return true;
+  authError = { form, field: "email", message: value ? "That doesn't look like an email address. Use the form name@example.com." : "Enter your email address." };
+  render(); document.querySelector(`#${form === "login" ? "li" : "su"}-email`)?.focus();
+  return false;
+}
+
 function loginCard() {
   return `<h1>Sign in</h1>
-    <label class="field" for="li-email">Email<input id="li-email" data-draft="li-email" type="email" autocomplete="username" required aria-required="true"></label>
-    <label class="field" for="li-pw">Password<input id="li-pw" data-draft="li-pw" type="password" autocomplete="current-password" required aria-required="true"></label>
+    ${errorBox("login")}
+    <label class="field" for="li-email">Email<input id="li-email" data-draft="li-email" type="email" autocomplete="username" required aria-required="true" ${invalid("login", "email")}></label>
+    <label class="field" for="li-pw">Password<input id="li-pw" data-draft="li-pw" type="password" autocomplete="current-password" required aria-required="true" ${invalid("login", "pw")}></label>
     <button class="primary" data-act="login" ${state.busy ? "disabled" : ""}>${icon("lock", 15)} Sign in</button>
     ${config.oidc ? `<a class="btn" href="/api/auth/oidc/start">Continue with ${esc(config.oidc.label)}</a>` : ""}
     ${config.allowSignup ? `<a class="small" href="#/signup">Create a new space</a>` : ""}
@@ -119,9 +148,10 @@ function signupCard() {
     <fieldset class="seg-fieldset"><legend class="small"><b>Kind of space</b> <span class="muted">(you can create the other kind later)</span></legend>
       <div class="kind-choices">${[["living", "Agamya Personal", "For you, your family, friends or community. Private by default."], ["work", "Agamya Enterprise", "For an organization: KT missions, roles, groups, outcomes. You become the owner."]]
         .map(([k, l, d]) => `<label class="kind-choice ${spaceType === k ? "on" : ""}"><input type="radio" name="signup-kind" value="${k}" ${spaceType === k ? "checked" : ""}> <span><b>${l}</b><br><span class="small muted">${d}</span></span></label>`).join("")}</div></fieldset>
+    ${errorBox("signup")}
     <label class="field" for="su-org">${personal ? "Name of your space" : "Organization"}<input id="su-org" data-draft="su-org" autocomplete="organization" placeholder="${personal ? "Our family kitchen" : "Northwind Operations"}" required aria-required="true"></label>
     <label class="field" for="su-name">Your name<input id="su-name" data-draft="su-name" autocomplete="name" required aria-required="true"></label>
-    <label class="field" for="su-email">Email<input id="su-email" data-draft="su-email" type="email" autocomplete="email" required aria-required="true"></label>
+    <label class="field" for="su-email">Email<input id="su-email" data-draft="su-email" type="email" autocomplete="email" required aria-required="true" ${invalid("signup", "email")}></label>
     <label class="field" for="su-pw">Password <span class="faint">(12+ characters)</span><input id="su-pw" data-draft="su-pw" type="password" autocomplete="new-password" required aria-required="true" aria-describedby="su-pw-help"></label>
     <span id="su-pw-help" class="small muted">At least 12 characters. Not your email.</span>
     <button class="primary" data-act="signup" ${state.busy ? "disabled" : ""}>Create ${personal ? "Personal space" : "Enterprise organization"}</button>
@@ -145,6 +175,7 @@ function inviteCard(token) {
       : `<p class="callout small">Create your Agamya account: choose your name and a password of at least 12 characters. This password is yours, for every space you join; there is no separate password for a space.</p>
          <label class="field">Your name<input data-draft="in-name" autocomplete="name"></label>
          <label class="field">Choose a password<input data-draft="in-pw" type="password" autocomplete="new-password" minlength="12"></label>`}
+    ${errorBox("invite")}
     <button class="primary" data-act="accept-invite" data-token="${esc(token ?? "")}" ${state.busy ? "disabled" : ""}>Join ${esc(i.spaceName)}</button>
     <p class="small muted">Signed in already with this email? You can also accept from your <a href="#/inbox">Invitations</a> page.</p>`;
 }
@@ -168,9 +199,14 @@ export async function authClick(e) {
     state.drafts["li-email"] = j.email; state.drafts["li-pw"] = j.password; render();
     document.querySelector('[data-act="login"]')?.focus(); announce(`Filled in the ${j.label} account. Press Sign in.`); return;
   }
-  if (a === "login") return act("login", async () => { await api("POST", "/api/auth/login", { email: draft("li-email"), password: state.drafts["li-pw"] ?? "" }); state.drafts["li-pw"] = ""; await finishLogin(); location.reload(); });
-  if (a === "signup") return act("signup", async () => { await api("POST", "/api/auth/signup", { orgName: draft("su-org"), displayName: draft("su-name"), email: draft("su-email"), password: state.drafts["su-pw"] ?? "", experience: spaceType }); state.drafts["su-pw"] = ""; await finishLogin("#/"); location.reload(); });
-  if (a === "accept-invite") return act("invite", async () => { await api("POST", "/api/auth/accept-invite", { token: t.dataset.token, displayName: draft("in-name"), password: state.drafts["in-pw"] ?? "" }); await finishLogin(); location.reload(); });
+  if (a === "login") {
+    if (!checkEmail("login", draft("li-email"))) return;
+    if (!(state.drafts["li-pw"] ?? "")) { authError = { form: "login", field: "pw", message: "Enter your password." }; render(); return document.getElementById("li-pw")?.focus(); }
+    return act("login", () => authCall("login", async () => { await api("POST", "/api/auth/login", { email: draft("li-email"), password: state.drafts["li-pw"] ?? "" }); state.drafts["li-pw"] = ""; await finishLogin(); location.reload(); }));
+  }
+  if (a === "signup" && !checkEmail("signup", draft("su-email"))) return;
+  if (a === "signup") return act("signup", () => authCall("signup", async () => { await api("POST", "/api/auth/signup", { orgName: draft("su-org"), displayName: draft("su-name"), email: draft("su-email"), password: state.drafts["su-pw"] ?? "", experience: spaceType }); state.drafts["su-pw"] = ""; await finishLogin("#/"); location.reload(); }));
+  if (a === "accept-invite") return act("invite", () => authCall("invite", async () => { await api("POST", "/api/auth/accept-invite", { token: t.dataset.token, displayName: draft("in-name"), password: state.drafts["in-pw"] ?? "" }); await finishLogin(); location.reload(); }, "pw"));
 }
 
 // ---------------------------------------------------------------- policies gate

@@ -19,3 +19,11 @@ submission-build/
 
 # Demo video: upload to YouTube; too large for the repository
 docs/submission/*.mp4
+
+# Internal working documents (kept locally, not part of the judged repository)
+docs/PITCH.md
+docs/DEMO_SCRIPT.md
+docs/testing/
+docs/submission/HANDOVER.md
+docs/submission/*.srt
+*.mp4

@@ -23,4 +23,4 @@ Every outside fact used in the deck, the Inspiration page and the video. Accesse
 | Moti asks about 2 s after a pause; the tutor stops a mistake in about 1.6 s | Measured (small sample) | docs/EVALUATION.md |
 | YouCook2 (25 recipes, 212 steps): 100% coverage, 0% invented evidence, 100% order; 50 builds for $0.23 | Measured | docs/EVALUATION.md |
 | Masking (43,501 sentences): email 100%, IBAN 99.9%, ID 99.9%, phone 94.6% | Measured | docs/EVALUATION.md |
-| A 10-minute live capture costs about $0.10–0.20 | **Estimate** (list prices) | docs/PITCH.md |
+| A 10-minute live capture costs about $0.10–0.20 | **Estimate** (list prices) | Pitch deck, slide 9 |

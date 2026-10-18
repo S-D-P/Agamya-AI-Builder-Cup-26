@@ -2,6 +2,7 @@
   "name": "agamya",
   "version": "1.0.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "description": "Agamya: captures the reasoning behind expert action, discovers when it applies, and measures whether someone else can apply it.",
   "scripts": {

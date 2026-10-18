@@ -2,6 +2,7 @@
 import { state, api, esc, render, act, draft, has, ago, usd, toast, isLiving } from "../core.js";
 import { icon } from "../icons.js";
 import { announce } from "../a11y.js";
+let invError = ""; // shown above the invite email field
 
 let data = null, tab = "members", lastInvite = null;
 const ROLE_LABEL = {
@@ -48,7 +49,10 @@ function members() {
     ${data.members.map((m) => `<div class="stack" style="border-bottom:1px dashed var(--line);padding-bottom:10px"><div class="row between wrap"><span><b>${esc(m.display_name)}</b> <span class="small muted">${esc(m.email)}</span></span><span class="small faint">${m.last_login_at ? `last sign-in ${ago(m.last_login_at)}` : "never signed in"}</span>
         ${m.user_id !== state.me.user.id && (owner || !m.roles.some((r) => OWNER_ONLY.includes(r))) ? `<button class="ghost sm danger" data-act="remove-member" data-user="${m.user_id}" data-name="${esc(m.display_name)}">Remove from space</button>` : ""}</div>
       <div class="row" role="group" aria-label="Roles for ${esc(m.display_name)}">${ROLES().map((r) => `<button class="chip" aria-pressed="${m.roles.includes(r)}" data-act="role" data-user="${m.user_id}" data-role="${r}" title="${esc(ROLE_HELP[r] ?? "")}" ${OWNER_ONLY.includes(r) && !owner ? "disabled" : ""}>${esc(label(r))}</button>`).join("")}</div></div>`).join("")}</section>` : ""}
-    <section class="card pad stack" aria-labelledby="inv-h"><h2 id="inv-h">Invite someone</h2><label class="field" for="inv-email">Email<input id="inv-email" data-draft="inv-email" type="email" autocomplete="off"></label>
+    <section class="card pad stack" aria-labelledby="inv-h"><h2 id="inv-h">Invite someone</h2>
+      <p class="small muted">Only this email can join. They sign in with this email and their own Agamya password (or create one); there is no space password to share.</p>
+      ${invError ? `<p class="auth-error" role="alert" tabindex="-1" id="inv-error">${esc(invError)}</p>` : ""}
+      <label class="field" for="inv-email">Email<input id="inv-email" data-draft="inv-email" type="email" autocomplete="off" ${invError ? 'aria-invalid="true" aria-describedby="inv-error"' : ""}></label>
       <fieldset class="roles-fieldset"><legend class="small"><b>Roles in this space</b></legend><div class="stack">${ROLES().filter((r) => manager() || ["EXPERT", "LEARNER"].includes(r)).map((r) => `<label class="check"><input type="checkbox" data-inv-role="${r}" ${r === "LEARNER" ? "checked" : ""} ${OWNER_ONLY.includes(r) && !owner ? "disabled" : ""}> ${esc(label(r))} <span class="small muted">${esc(ROLE_HELP[r] ?? "")}</span></label>`).join("")}</div></fieldset>
       <div><button class="primary" data-act="invite" ${state.busy ? "disabled" : ""}>Create invitation</button></div>
       ${lastInvite ? inviteSent(lastInvite) : ""}
@@ -103,7 +107,9 @@ export async function adminClick(e) {
   if (a === "revoke-inv") return act("revoke", async () => { await api("POST", `/api/admin/invitations/${t.dataset.id}/revoke`); toast("Invitation revoked."); data = null; });
   if (a === "invite") {
     const roles = [...document.querySelectorAll("[data-inv-role]")].filter((x) => x.checked).map((x) => x.dataset.invRole);
-    const email = draft("inv-email");
+    const email = String(draft("inv-email") ?? "").trim();
+    invError = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/.test(email) ? "" : email ? "That doesn't look like an email address. Use the form name@example.com." : "Enter the email address of the person to invite.";
+    if (invError) { render(); return document.getElementById("inv-email")?.focus(); }
     return act("invite", async () => { lastInvite = { ...(await api("POST", "/api/admin/invitations", { email, roles })), email }; state.drafts["inv-email"] = ""; });
   }
   if (a === "publish") return act("publish", async () => { await api("POST", "/api/admin/policies", { type: document.getElementById("pol-type").value, version: draft("pol-version"), content: draft("pol-text") }); toast("Published. Members will be asked to accept it."); data = null; });
