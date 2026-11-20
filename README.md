@@ -112,6 +112,7 @@ docs/      judges' guide, architecture, evaluation, security, pitch deck, images
 - Narration in languages other than English, Hindi, Marathi and Kannada is not yet reviewed by native speakers.
 - A practice result shows practice, not certification.
 
+
 ## License
 
 [MIT](LICENSE)
