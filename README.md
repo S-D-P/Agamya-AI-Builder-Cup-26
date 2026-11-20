@@ -10,7 +10,7 @@ Agamya captures the judgment experts carry in their heads and hands, and passes 
 |---|---|
 | **Live app** | https://agamya-82538920788.us-central1.run.app |
 | **Judges' guide** (every feature, with screenshots) | [docs/JUDGES_GUIDE.md](docs/JUDGES_GUIDE.md) |
-| **Product demo video** (under 4 minutes) | [Watch on YouTube](https://www.youtube.com/watch?v=gc4HFSOJwi0) |
+| **Product demo video** (under 3 minutes) | [Watch on YouTube](https://www.youtube.com/watch?v=gc4HFSOJwi0) |
 | **Full, uncut demos** (with subtitles) | [Culture mode](https://drive.google.com/file/d/1t4CVmkqMKETwBMcNXEBytm_ynuz3XpXw/view?usp=drive_link) · [Work mode](https://drive.google.com/file/d/1SbRbL3drKHkyTPlSQqNl1kiCey6IW5PT/view?usp=drive_link) · [Learner](https://drive.google.com/file/d/1aeFphfi6Vuk_5EqHKEcrx_-tiUh6_yn7/view?usp=drive_link) |
 | **Our inspiration** (the story behind Agamya, with sources) | https://agamya-82538920788.us-central1.run.app/#/inspiration |
 | **Pitch deck** | [PDF](docs/submission/Agamya-Submission-Deck.pdf) · [sources](docs/submission/RESEARCH_LEDGER.md) |

@@ -83,7 +83,7 @@ function landing() {
 // Demo videos, hosted on Google Drive (public). The product demo plays here in Drive's own player; the others open in Drive.
 const DRIVE = (id) => ({ view: `https://drive.google.com/file/d/${id}/view`, embed: `https://drive.google.com/file/d/${id}/preview` });
 const DEMOS = [
-  ["Product demo", "The whole cycle in under four minutes: capture, Work Map, sharing, and a learner practising with Moti.", DRIVE("1isA43mz_f_-Gx9qeJrtaiFC_V8UoQdHU")],
+  ["Product demo", "The whole cycle in under four minutes: capture, Work Map, sharing, and a learner practising with Moti.", DRIVE("16_kFvwf53QLxDhULy6YCerzyRA9g3kFJ")],
   ["Culture mode demo", "Bharati teaches a Satara recipe in Marathi while Moti asks why. Uncut, with subtitles.", DRIVE("1t4CVmkqMKETwBMcNXEBytm_ynuz3XpXw")],
   ["Work mode demo", "A JMeter knowledge transfer before maternity leave, on a shared screen. Uncut, with subtitles.", DRIVE("1SbRbL3drKHkyTPlSQqNl1kiCey6IW5PT")],
   ["Learner demo", "Kiran listens to the lesson and practises with Moti as her tutor. Uncut, with subtitles.", DRIVE("1aeFphfi6Vuk_5EqHKEcrx_-tiUh6_yn7")],
